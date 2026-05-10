@@ -403,20 +403,27 @@ function renderCalendar() {
   }
 }
 
-document.getElementById('itemDateBtn').onclick = openCalendar;
-document.getElementById('calOverlay').onclick = (e) => {
+document.getElementById('itemDateBtn').addEventListener('click', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  openCalendar();
+});
+document.getElementById('calOverlay').addEventListener('click', function(e) {
   if (e.target.id === 'calOverlay') closeCalendar();
-};
-document.getElementById('calClose').onclick = closeCalendar;
-document.getElementById('calPrev').onclick = () => {
+});
+document.getElementById('calClose').addEventListener('click', closeCalendar);
+document.getElementById('calPrev').addEventListener('click', function(e) {
+  e.preventDefault();
   calCurrentMonth.setMonth(calCurrentMonth.getMonth() - 1);
   renderCalendar();
-};
-document.getElementById('calNext').onclick = () => {
+});
+document.getElementById('calNext').addEventListener('click', function(e) {
+  e.preventDefault();
   calCurrentMonth.setMonth(calCurrentMonth.getMonth() + 1);
   renderCalendar();
-};
-document.getElementById('calToday').onclick = () => {
+});
+document.getElementById('calToday').addEventListener('click', function(e) {
+  e.preventDefault();
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -424,12 +431,13 @@ document.getElementById('calToday').onclick = () => {
   document.getElementById('itemDate').value = `${yyyy}-${mm}-${dd}`;
   updateDateButton();
   closeCalendar();
-};
-document.getElementById('calClear').onclick = () => {
+});
+document.getElementById('calClear').addEventListener('click', function(e) {
+  e.preventDefault();
   document.getElementById('itemDate').value = '';
   updateDateButton();
   closeCalendar();
-};
+});
 
 function closeModal() {
   document.getElementById('modal').classList.remove('show');
