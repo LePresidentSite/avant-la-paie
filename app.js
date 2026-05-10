@@ -292,7 +292,144 @@ function openModal(type, item = null) {
   renderPresets(presets);
 
   document.getElementById('modal').classList.add('show');
+
+  // Mettre à jour le bouton date
+  updateDateButton();
 }
+
+// =======================================================
+// Calendrier custom
+// =======================================================
+let calCurrentMonth = new Date();
+calCurrentMonth.setDate(1);
+
+function updateDateButton() {
+  const val = document.getElementById('itemDate').value;
+  const btn = document.getElementById('itemDateBtn');
+  const lbl = document.getElementById('itemDateLabel');
+  if (val) {
+    const d = new Date(val + 'T00:00:00');
+    lbl.textContent = d.toLocaleDateString('fr-CA', {
+      weekday: 'short', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    btn.classList.remove('empty');
+  } else {
+    lbl.textContent = 'Choisir une date';
+    btn.classList.add('empty');
+  }
+}
+
+function openCalendar() {
+  // Initialiser le mois affiché sur la date sélectionnée si elle existe, sinon aujourd'hui
+  const val = document.getElementById('itemDate').value;
+  if (val) {
+    const d = new Date(val + 'T00:00:00');
+    calCurrentMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  } else {
+    const today = new Date();
+    calCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+  renderCalendar();
+  document.getElementById('calOverlay').classList.add('show');
+}
+
+function closeCalendar() {
+  document.getElementById('calOverlay').classList.remove('show');
+}
+
+function renderCalendar() {
+  const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const year = calCurrentMonth.getFullYear();
+  const month = calCurrentMonth.getMonth();
+  document.getElementById('calTitle').textContent = `${months[month]} ${year}`;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // Premier jour du mois
+  const firstDay = new Date(year, month, 1);
+  // Lundi = 0, Dimanche = 6 (ajustement pour FR)
+  let startWeekday = firstDay.getDay() - 1;
+  if (startWeekday < 0) startWeekday = 6;
+
+  // Jours du mois précédent
+  const prevMonthLastDay = new Date(year, month, 0).getDate();
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'cal-day other';
+    d.textContent = prevMonthLastDay - i;
+    d.disabled = true;
+    grid.appendChild(d);
+  }
+
+  // Jours du mois courant
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const selectedVal = document.getElementById('itemDate').value;
+  const selected = selectedVal ? new Date(selectedVal + 'T00:00:00') : null;
+
+  for (let d = 1; d <= lastDay; d++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cal-day';
+    btn.textContent = d;
+
+    const thisDate = new Date(year, month, d);
+    if (thisDate.getTime() === today.getTime()) btn.classList.add('today');
+    if (selected && thisDate.getTime() === selected.getTime()) btn.classList.add('selected');
+
+    btn.onclick = () => {
+      const yyyy = year;
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      document.getElementById('itemDate').value = `${yyyy}-${mm}-${dd}`;
+      updateDateButton();
+      closeCalendar();
+    };
+    grid.appendChild(btn);
+  }
+
+  // Jours du mois suivant pour compléter la dernière ligne
+  const totalCells = grid.children.length;
+  const remaining = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'cal-day other';
+    d.textContent = i;
+    d.disabled = true;
+    grid.appendChild(d);
+  }
+}
+
+document.getElementById('itemDateBtn').onclick = openCalendar;
+document.getElementById('calOverlay').onclick = (e) => {
+  if (e.target.id === 'calOverlay') closeCalendar();
+};
+document.getElementById('calClose').onclick = closeCalendar;
+document.getElementById('calPrev').onclick = () => {
+  calCurrentMonth.setMonth(calCurrentMonth.getMonth() - 1);
+  renderCalendar();
+};
+document.getElementById('calNext').onclick = () => {
+  calCurrentMonth.setMonth(calCurrentMonth.getMonth() + 1);
+  renderCalendar();
+};
+document.getElementById('calToday').onclick = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('itemDate').value = `${yyyy}-${mm}-${dd}`;
+  updateDateButton();
+  closeCalendar();
+};
+document.getElementById('calClear').onclick = () => {
+  document.getElementById('itemDate').value = '';
+  updateDateButton();
+  closeCalendar();
+};
 
 function closeModal() {
   document.getElementById('modal').classList.remove('show');
