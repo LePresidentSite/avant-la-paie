@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0e17">
+<title>Avant la Paie</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1925;
+    --surface-2: #252434;
+    --ink: #fffffe;
+    --ink-soft: #a7a9be;
+    --accent: #ff8906;
+    --accent-2: #f25f4c;
+    --good: #2cb67d;
+    --warn: #e53170;
+    --line: rgba(255,255,254,0.08);
+    --radius: 18px;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Fraunces', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(255,137,6,0.12), transparent 60%),
+      radial-gradient(900px 500px at -10% 100%, rgba(242,95,76,0.10), transparent 60%),
+      var(--bg);
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 20px 120px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    font-style: italic;
+  }
+  .logo span { color: var(--accent); }
+
+  .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* CARTE DE PAIE */
+  .paycheck {
+    background: linear-gradient(140deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .paycheck::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,137,6,0.18), transparent 70%);
+    pointer-events: none;
+  }
+
+  .paycheck label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .paycheck-row { display: flex; gap: 14px; margin-bottom: 14px; }
+  .paycheck-row > div { flex: 1; }
+
+  input[type="number"], input[type="date"], input[type="text"] {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 600;
+    transition: border-color 0.2s;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: var(--ink-soft); opacity: 0.5; }
+
+  .countdown {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .countdown b { color: var(--accent); font-size: 16px; }
+
+  /* RESTE À ALLOUER - le HÉROS visuel */
+  .remaining {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 22px;
+    margin-bottom: 22px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .remaining .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+
+  .remaining .amount {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-style: italic;
+    transition: color 0.3s;
+  }
+
+  .remaining .amount.good { color: var(--good); }
+  .remaining .amount.warn { color: var(--accent); }
+  .remaining .amount.over { color: var(--warn); }
+
+  .remaining .sub {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: rgba(255,255,254,0.06);
+    border-radius: 999px;
+    margin-top: 18px;
+    overflow: hidden;
+  }
+  .progress-bar div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--good), var(--accent));
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+
+  /* ENVELOPPES */
+  .section-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 28px 4px 14px;
+  }
+  .section-title h2 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .section-title span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .envelopes { display: flex; flex-direction: column; gap: 10px; }
+
+  .envelope {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.15s, border-color 0.2s;
+  }
+  .envelope.allocated { border-color: rgba(44,182,125,0.35); }
+  .envelope:active { transform: scale(0.98); }
+
+  .env-emoji {
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,254,0.04);
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .env-info { flex: 1; min-width: 0; }
+  .env-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .env-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .env-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    background: rgba(255,255,254,0.05);
+    border: none;
+    color: var(--ink);
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+  }
+  .icon-btn:active { background: rgba(255,255,254,0.12); }
+  .icon-btn.check.on {
+    background: var(--good);
+    color: var(--bg);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 14px;
+  }
+
+  /* BOUTON AJOUTER */
+  .add-btn {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(255,137,6,0.4);
+    z-index: 10;
+    transition: transform 0.15s;
+  }
+  .add-btn:active { transform: translateX(-50%) scale(0.96); }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: flex-end;
+    z-index: 100;
+    animation: fade 0.2s ease;
+  }
+  .modal-bg.show { display: flex; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--surface);
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 22px calc(24px + env(safe-area-inset-bottom));
+    animation: up 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .emoji-pick {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .emoji-pick button {
+    background: rgba(255,255,254,0.05);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    width: 44px; height: 44px;
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .emoji-pick button.sel {
+    border-color: var(--accent);
+    background: rgba(255,137,6,0.12);
+  }
+
+  .modal-actions {
+    display: flex; gap: 10px; margin-top: 22px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+  .btn-danger { background: rgba(229,49,112,0.15); color: var(--warn); }
+
+  /* PRESETS */
+  .presets {
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .presets-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-chip {
+    background: rgba(255,255,254,0.05);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-family: 'Fraunces', serif;
+    cursor: pointer;
+  }
+  .preset-chip:active { background: rgba(255,137,6,0.15); }
+
+  .reset-link {
+    display: block;
+    text-align: center;
+    margin-top: 18px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <div class="logo">avant<span>.</span>la paie</div>
+    <div class="date" id="todayDate"></div>
+  </header>
+
+  <!-- Carte de paie -->
+  <div class="paycheck">
+    <div class="paycheck-row">
+      <div>
+        <label>Montant prévu</label>
+        <input type="number" id="incomeInput" placeholder="0" inputmode="decimal" step="0.01">
+      </div>
+      <div>
+        <label>Date de paie</label>
+        <input type="date" id="dateInput">
+      </div>
+    </div>
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+  <!-- Reste à allouer -->
+  <div class="remaining">
+    <div class="label">Reste à allouer</div>
+    <div class="amount" id="remainingAmount">0 $</div>
+    <div class="sub" id="remainingSub">Commence par entrer ta paie ci-dessus</div>
+    <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Enveloppes -->
+  <div class="section-title">
+    <h2>Enveloppes</h2>
+    <span id="envCount">0 / 0</span>
+  </div>
+
+  <div class="envelopes" id="envelopes"></div>
+
+  <a class="reset-link" id="resetBtn">Tout réinitialiser</a>
+
+</div>
+
+<button class="add-btn" id="addBtn">+ Nouvelle enveloppe</button>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Nouvelle enveloppe</h3>
+
+    <div class="field">
+      <label>Icône</label>
+      <div class="emoji-pick" id="emojiPick"></div>
+    </div>
+
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" id="envName" placeholder="ex. Épicerie">
+    </div>
+
+    <div class="field">
+      <label>Montant à mettre de côté</label>
+      <input type="number" id="envAmount" placeholder="0" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="presets">
+      <div class="presets-label">Suggestions rapides</div>
+      <div class="preset-row" id="presetRow"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelBtn">Annuler</button>
+      <button class="btn btn-danger" id="deleteBtn" style="display:none;">Supprimer</button>
+      <button class="btn btn-primary" id="saveBtn">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
