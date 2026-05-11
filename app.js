@@ -330,6 +330,7 @@ async function loadUserData() {
         name: e.name,
         amount: parseFloat(e.amount),
         allocated: e.allocated,
+        date: e.date || '',
         recurrence: e.recurrence || 'once'
       }));
     }
@@ -402,6 +403,7 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
+          date: env.date || null,
           allocated: env.allocated || false,
           recurrence: env.recurrence || 'once'
         })
@@ -416,6 +418,7 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
+          date: env.date || null,
           allocated: env.allocated,
           recurrence: env.recurrence || 'once'
         })
@@ -492,7 +495,7 @@ function countRecurrent() {
 
 // Renouveler un cycle: décocher reçus/déposés ET avancer les dates
 async function renewCycle() {
-  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
+  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus et dépenses récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
 
   const btn = document.getElementById('newCycleBtn');
   btn.disabled = true;
@@ -513,6 +516,9 @@ async function renewCycle() {
     for (const e of state.envelopes) {
       if (e.recurrence && e.recurrence !== 'once') {
         e.allocated = false;
+        if (e.date) {
+          e.date = advanceDate(e.date, e.recurrence);
+        }
         await saveEnvelope(e, false);
       }
     }
@@ -729,13 +735,21 @@ function render() {
     state.envelopes.forEach(env => {
       const recBadge = (env.recurrence && env.recurrence !== 'once')
         ? `<span class="rec-badge">${getRecurrenceLabel(env.recurrence)}</span>` : '';
+      let when = '';
+      if (env.date) {
+        const d = daysUntil(env.date);
+        if (d === 0) when = `<span class="when">aujourd'hui</span>`;
+        else if (d === 1) when = `<span class="when">demain</span>`;
+        else if (d > 1) when = `<span class="when">dans ${d}j</span>`;
+        else when = `<span class="when">en retard ${Math.abs(d)}j</span>`;
+      }
       const div = document.createElement('div');
       div.className = 'item' + (env.allocated ? ' allocated' : '');
       div.innerHTML = `
         <div class="item-emoji">${env.emoji}</div>
         <div class="item-info">
           <div class="item-name">${escapeHtml(env.name)}${recBadge}</div>
-          <div class="item-amount">${fmt(env.amount)}</div>
+          <div class="item-amount">${fmt(env.amount)}${when}</div>
         </div>
         <div class="item-actions">
           <button class="icon-btn check ${env.allocated?'on':''}" data-env-toggle="${env.id}">${env.allocated?'✓':'○'}</button>
@@ -770,7 +784,8 @@ function openModal(type, item = null) {
 
   document.getElementById('nameLabel').textContent = isRev ? 'Source du revenu' : 'Nom de l\'enveloppe';
   document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant à mettre de côté';
-  document.getElementById('dateField').style.display = isRev ? 'block' : 'none';
+  document.getElementById('dateField').style.display = 'block';
+  document.getElementById('dateLabel').textContent = isRev ? 'Date prévue' : 'Date de la dépense';
   document.getElementById('presetsLabel').textContent = isRev ? 'Sources rapides' : 'Suggestions rapides';
   document.getElementById('itemName').placeholder = isRev ? 'ex. Paie principale' : 'ex. Épicerie';
 
@@ -1166,12 +1181,14 @@ document.getElementById('saveBtn').onclick = async () => {
       const e = state.envelopes.find(x => x.id === editing.id);
       if (e) {
         e.name = name; e.amount = amount; e.emoji = selectedEmoji;
+        e.date = date;
         e.recurrence = selectedRecurrence;
         await saveEnvelope(e, false);
       }
     } else {
       const newEnv = {
         emoji: selectedEmoji, name, amount, allocated: false,
+        date,
         recurrence: selectedRecurrence
       };
       const saved = await saveEnvelope(newEnv, true);
@@ -1182,6 +1199,7 @@ document.getElementById('saveBtn').onclick = async () => {
           name: saved.name,
           amount: parseFloat(saved.amount),
           allocated: saved.allocated,
+          date: saved.date || '',
           recurrence: saved.recurrence || 'once'
         });
       }
