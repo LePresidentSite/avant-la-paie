@@ -1,12 +1,9 @@
 // ============================================================
-// Avant la Paie - v2
-// Gestion de revenus multiples + enveloppes de dépenses
+// Avant la Paie - v3
+// Authentification Supabase + données dans le nuage
 // ============================================================
 
-const STORE_KEY = 'avantlapaie.v2';
-const STORE_KEY_OLD = 'avantlapaie.v1';
-
-// Presets pour ENVELOPPES (dépenses)
+// PRESETS pour enveloppes (dépenses)
 const PRESETS_ENV = [
   { emoji: '🏠', name: 'Loyer / Hypothèque' },
   { emoji: '🛒', name: 'Épicerie' },
@@ -25,7 +22,6 @@ const PRESETS_ENV = [
   { emoji: '🐾', name: 'Animaux' }
 ];
 
-// Presets pour REVENUS
 const PRESETS_REV = [
   { emoji: '💼', name: 'Paie principale' },
   { emoji: '💵', name: 'Paie secondaire' },
@@ -43,52 +39,343 @@ const PRESETS_REV = [
 const EMOJIS_ENV = ['🏠','🛒','⚡','💧','📱','🌐','🚗','⛽','💊','🏥','🎉','☕','💰','🎁','👶','🐾','📚','👕','🎮','✈️','🍕','🧾'];
 const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','🎁','📈','🏖️','👶','📱','🏠','🎨','✨','💎','🪙'];
 
-// État
+// État global
+let currentUser = null;
 let state = {
-  revenus: [],     // { id, emoji, name, amount, date, received }
-  envelopes: []    // { id, emoji, name, amount, allocated }
+  revenus: [],
+  envelopes: []
 };
 
-let editing = { type: null, id: null }; // type: 'revenu' | 'envelope'
+let editing = { type: null, id: null };
 let selectedEmoji = '💼';
 
-// =======================================================
-// Persistance
-// =======================================================
-function load() {
+// ============================================================
+// GESTION DES ÉCRANS
+// ============================================================
+function showScreen(screenId) {
+  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('mainApp').classList.remove('show');
+
+  if (screenId === 'main') {
+    document.getElementById('mainApp').classList.add('show');
+  } else {
+    document.getElementById(screenId).style.display = 'flex';
+  }
+}
+
+// ============================================================
+// AUTHENTIFICATION
+// ============================================================
+
+// Vérifier si l'utilisateur est déjà connecté au démarrage
+async function checkAuth() {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      state = Object.assign(state, JSON.parse(raw));
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      currentUser = session.user;
+      await loadUserData();
+      showScreen('main');
+      render();
+    } else {
+      showScreen('welcomeScreen');
+    }
+  } catch (e) {
+    console.error('Erreur auth:', e);
+    showScreen('welcomeScreen');
+  }
+}
+
+// Inscription
+async function signUp(email, password) {
+  const errorEl = document.getElementById('signupError');
+  const successEl = document.getElementById('signupSuccess');
+  const btn = document.getElementById('signupSubmitBtn');
+
+  errorEl.classList.remove('show');
+  successEl.classList.remove('show');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Remplis tous les champs';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (password.length < 8) {
+    errorEl.textContent = 'Le mot de passe doit avoir au moins 8 caractères';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    errorEl.textContent = 'Le mot de passe doit contenir : 1 minuscule, 1 majuscule et 1 chiffre';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Création en cours…';
+
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          trial_started_at: new Date().toISOString()
+        }
+      }
+    });
+
+    if (error) {
+      errorEl.textContent = traduireErreur(error.message);
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Créer mon compte';
       return;
     }
-    // Migration v1 -> v2 si données existent
-    const oldRaw = localStorage.getItem(STORE_KEY_OLD);
-    if (oldRaw) {
-      const old = JSON.parse(oldRaw);
-      if (old.income && old.income > 0) {
-        state.revenus.push({
-          id: 'r_' + Date.now(),
-          emoji: '💼',
-          name: 'Paie principale',
-          amount: old.income,
-          date: old.payDate || '',
-          received: false
-        });
+
+    if (data.user) {
+      // Si confirmation email désactivée, connexion immédiate
+      if (data.session) {
+        currentUser = data.user;
+        await initUserProfile();
+        await loadUserData();
+        showScreen('main');
+        render();
+      } else {
+        // Confirmation par email activée
+        successEl.textContent = '✓ Compte créé! Vérifie ton courriel pour confirmer.';
+        successEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Créer mon compte';
       }
-      if (old.envelopes) state.envelopes = old.envelopes;
-      save();
     }
-  } catch(e) {}
+  } catch (e) {
+    errorEl.textContent = 'Erreur : ' + (e.message || 'inconnue');
+    errorEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Créer mon compte';
+  }
 }
 
-function save() {
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+// Connexion
+async function signIn(email, password) {
+  const errorEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginSubmitBtn');
+  errorEl.classList.remove('show');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Remplis tous les champs';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Connexion…';
+
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (error) {
+      errorEl.textContent = traduireErreur(error.message);
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Se connecter';
+      return;
+    }
+
+    currentUser = data.user;
+    await loadUserData();
+    showScreen('main');
+    render();
+    btn.disabled = false;
+    btn.textContent = 'Se connecter';
+  } catch (e) {
+    errorEl.textContent = 'Erreur : ' + (e.message || 'inconnue');
+    errorEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Se connecter';
+  }
 }
 
-// =======================================================
-// Utilitaires
-// =======================================================
+// Déconnexion
+async function signOut() {
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  state = { revenus: [], envelopes: [] };
+  showScreen('welcomeScreen');
+}
+
+// Traduire les erreurs Supabase
+function traduireErreur(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Courriel ou mot de passe incorrect';
+  if (m.includes('user already registered')) return 'Ce courriel a déjà un compte. Connecte-toi.';
+  if (m.includes('email not confirmed')) return 'Tu dois confirmer ton courriel d\'abord.';
+  if (m.includes('password should be')) return 'Mot de passe trop faible (min 8 caractères avec maj/min/chiffres)';
+  if (m.includes('rate limit')) return 'Trop de tentatives. Réessaie dans quelques minutes.';
+  if (m.includes('network')) return 'Pas de connexion Internet. Vérifie ta connexion.';
+  return msg;
+}
+
+// ============================================================
+// DONNÉES UTILISATEUR (Supabase)
+// ============================================================
+
+// Initialiser le profil après inscription
+async function initUserProfile() {
+  if (!currentUser) return;
+  // Pour l'instant, rien à faire — on créera les tables plus tard
+}
+
+// Charger les données depuis Supabase
+async function loadUserData() {
+  if (!currentUser) return;
+
+  try {
+    // Charger revenus
+    const { data: revs, error: revErr } = await supabaseClient
+      .from('revenus')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('date', { ascending: true });
+
+    if (!revErr && revs) {
+      state.revenus = revs.map(r => ({
+        id: r.id,
+        emoji: r.emoji,
+        name: r.name,
+        amount: parseFloat(r.amount),
+        date: r.date || '',
+        received: r.received
+      }));
+    }
+
+    // Charger enveloppes
+    const { data: envs, error: envErr } = await supabaseClient
+      .from('envelopes')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+
+    if (!envErr && envs) {
+      state.envelopes = envs.map(e => ({
+        id: e.id,
+        emoji: e.emoji,
+        name: e.name,
+        amount: parseFloat(e.amount),
+        allocated: e.allocated
+      }));
+    }
+  } catch (e) {
+    console.error('Erreur chargement données:', e);
+  }
+}
+
+// Sauvegarder un revenu
+async function saveRevenu(rev, isNew) {
+  if (!currentUser) return null;
+  try {
+    if (isNew) {
+      const { data, error } = await supabaseClient
+        .from('revenus')
+        .insert({
+          user_id: currentUser.id,
+          emoji: rev.emoji,
+          name: rev.name,
+          amount: rev.amount,
+          date: rev.date || null,
+          received: rev.received || false
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { error } = await supabaseClient
+        .from('revenus')
+        .update({
+          emoji: rev.emoji,
+          name: rev.name,
+          amount: rev.amount,
+          date: rev.date || null,
+          received: rev.received
+        })
+        .eq('id', rev.id)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return rev;
+    }
+  } catch (e) {
+    console.error('Erreur sauvegarde revenu:', e);
+    alert('Erreur de sauvegarde : ' + e.message);
+    return null;
+  }
+}
+
+async function deleteRevenu(id) {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('revenus').delete().eq('id', id).eq('user_id', currentUser.id);
+  } catch (e) {
+    console.error('Erreur suppression revenu:', e);
+  }
+}
+
+// Sauvegarder une enveloppe
+async function saveEnvelope(env, isNew) {
+  if (!currentUser) return null;
+  try {
+    if (isNew) {
+      const { data, error } = await supabaseClient
+        .from('envelopes')
+        .insert({
+          user_id: currentUser.id,
+          emoji: env.emoji,
+          name: env.name,
+          amount: env.amount,
+          allocated: env.allocated || false
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { error } = await supabaseClient
+        .from('envelopes')
+        .update({
+          emoji: env.emoji,
+          name: env.name,
+          amount: env.amount,
+          allocated: env.allocated
+        })
+        .eq('id', env.id)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return env;
+    }
+  } catch (e) {
+    console.error('Erreur sauvegarde enveloppe:', e);
+    alert('Erreur de sauvegarde : ' + e.message);
+    return null;
+  }
+}
+
+async function deleteEnvelope(id) {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('envelopes').delete().eq('id', id).eq('user_id', currentUser.id);
+  } catch (e) {
+    console.error('Erreur suppression enveloppe:', e);
+  }
+}
+
+// ============================================================
+// UTILITAIRES
+// ============================================================
 function fmt(n) {
   if (isNaN(n)) n = 0;
   return new Intl.NumberFormat('fr-CA', {
@@ -117,16 +404,40 @@ function daysUntil(dStr) {
   return Math.round((target - now) / 86400000);
 }
 
-// =======================================================
-// Rendu principal
-// =======================================================
+// Calculer les jours restants de l'essai
+function getTrialDaysLeft() {
+  if (!currentUser || !currentUser.user_metadata || !currentUser.user_metadata.trial_started_at) {
+    return 30;
+  }
+  const start = new Date(currentUser.user_metadata.trial_started_at);
+  const now = new Date();
+  const daysUsed = Math.floor((now - start) / 86400000);
+  return Math.max(0, 30 - daysUsed);
+}
+
+// ============================================================
+// RENDU PRINCIPAL
+// ============================================================
 function render() {
-  // Date du jour
+  // Date
   const today = new Date();
   document.getElementById('todayDate').textContent =
     today.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
 
-  // ---------- REVENUS ----------
+  // Avatar utilisateur
+  if (currentUser) {
+    const email = currentUser.email || '';
+    const initial = email[0] ? email[0].toUpperCase() : 'U';
+    document.getElementById('userBtn').textContent = initial;
+    document.getElementById('userEmail').textContent = email;
+
+    const daysLeft = getTrialDaysLeft();
+    document.getElementById('userPlan').textContent =
+      daysLeft > 0 ? `⏳ Essai · ${daysLeft} jour${daysLeft>1?'s':''} restant${daysLeft>1?'s':''}`
+                   : '⚠️ Essai terminé';
+  }
+
+  // Total revenus
   const totalRevenus = state.revenus.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
   const receivedCount = state.revenus.filter(r => r.received).length;
 
@@ -138,7 +449,6 @@ function render() {
     totalBox.style.display = 'block';
     document.getElementById('totalRevenusAmount').textContent = fmt(totalRevenus);
 
-    // Trouver la prochaine paie à venir
     const upcoming = state.revenus
       .filter(r => r.date && !r.received)
       .map(r => ({ ...r, days: daysUntil(r.date) }))
@@ -162,6 +472,7 @@ function render() {
     totalBox.style.display = 'none';
   }
 
+  // Liste revenus
   const revBox = document.getElementById('revenusList');
   revBox.innerHTML = '';
   state.revenus.forEach(r => {
@@ -181,14 +492,14 @@ function render() {
         <div class="item-amount"><strong class="green">${fmt(r.amount)}</strong>${when}</div>
       </div>
       <div class="item-actions">
-        <button class="icon-btn check ${r.received?'on':''}" data-rev-toggle="${r.id}" title="Marquer reçu">${r.received?'✓':'○'}</button>
-        <button class="icon-btn" data-rev-edit="${r.id}" title="Modifier">✎</button>
+        <button class="icon-btn check ${r.received?'on':''}" data-rev-toggle="${r.id}">${r.received?'✓':'○'}</button>
+        <button class="icon-btn" data-rev-edit="${r.id}">✎</button>
       </div>
     `;
     revBox.appendChild(div);
   });
 
-  // ---------- RESTE À ALLOUER ----------
+  // Reste à allouer
   const totalAlloc = state.envelopes.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
   const remain = totalRevenus - totalAlloc;
 
@@ -216,7 +527,7 @@ function render() {
   const pct = totalRevenus > 0 ? Math.min(100, (totalAlloc / totalRevenus) * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
 
-  // ---------- ENVELOPPES ----------
+  // Enveloppes
   const envBox = document.getElementById('envelopesList');
   envBox.innerHTML = '';
 
@@ -236,8 +547,8 @@ function render() {
           <div class="item-amount">${fmt(env.amount)}</div>
         </div>
         <div class="item-actions">
-          <button class="icon-btn check ${env.allocated?'on':''}" data-env-toggle="${env.id}" title="Marquer déposée">${env.allocated?'✓':'○'}</button>
-          <button class="icon-btn" data-env-edit="${env.id}" title="Modifier">✎</button>
+          <button class="icon-btn check ${env.allocated?'on':''}" data-env-toggle="${env.id}">${env.allocated?'✓':'○'}</button>
+          <button class="icon-btn" data-env-edit="${env.id}">✎</button>
         </div>
       `;
       envBox.appendChild(div);
@@ -247,13 +558,11 @@ function render() {
   const allocCount = state.envelopes.filter(e => e.allocated).length;
   document.getElementById('envCount').textContent =
     `${allocCount} / ${state.envelopes.length} déposées`;
-
-  save();
 }
 
-// =======================================================
-// Modal
-// =======================================================
+// ============================================================
+// MODAL D'ÉDITION
+// ============================================================
 function openModal(type, item = null) {
   editing = { type, id: item ? item.id : null };
 
@@ -263,26 +572,20 @@ function openModal(type, item = null) {
 
   selectedEmoji = item ? item.emoji : (isRev ? '💼' : '🏠');
 
-  // Titre
   const title = item ? (isRev ? 'Modifier le revenu' : 'Modifier l\'enveloppe')
                      : (isRev ? 'Nouveau revenu' : 'Nouvelle enveloppe');
   const badge = isRev ? '<span class="badge green">Revenu</span>' : '<span class="badge">Dépense</span>';
   document.getElementById('modalTitle').innerHTML = title + ' ' + badge;
 
-  // Labels
   document.getElementById('nameLabel').textContent = isRev ? 'Source du revenu' : 'Nom de l\'enveloppe';
   document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant à mettre de côté';
   document.getElementById('dateField').style.display = isRev ? 'block' : 'none';
   document.getElementById('presetsLabel').textContent = isRev ? 'Sources rapides' : 'Suggestions rapides';
-
-  // Placeholder
   document.getElementById('itemName').placeholder = isRev ? 'ex. Paie principale' : 'ex. Épicerie';
 
-  // Bouton primaire couleur
   const primary = document.getElementById('saveBtn');
   primary.classList.toggle('green', isRev);
 
-  // Pré-remplir
   document.getElementById('itemName').value = item ? item.name : '';
   document.getElementById('itemAmount').value = item ? item.amount : '';
   document.getElementById('itemDate').value = item && item.date ? item.date : '';
@@ -290,16 +593,59 @@ function openModal(type, item = null) {
 
   renderEmojiPick(emojis, isRev);
   renderPresets(presets);
+  updateDateButton();
 
   document.getElementById('modal').classList.add('show');
-
-  // Mettre à jour le bouton date
-  updateDateButton();
 }
 
-// =======================================================
-// Calendrier custom
-// =======================================================
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  editing = { type: null, id: null };
+}
+
+function renderEmojiPick(emojis, isRev) {
+  const box = document.getElementById('emojiPick');
+  box.innerHTML = '';
+  emojis.forEach(em => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = em;
+    if (em === selectedEmoji) {
+      b.classList.add('sel');
+      if (isRev) b.classList.add('green');
+    }
+    b.onclick = (e) => {
+      e.preventDefault();
+      selectedEmoji = em;
+      renderEmojiPick(emojis, isRev);
+    };
+    box.appendChild(b);
+  });
+}
+
+function renderPresets(presets) {
+  const row = document.getElementById('presetRow');
+  row.innerHTML = '';
+  presets.forEach(p => {
+    const c = document.createElement('button');
+    c.type = 'button';
+    c.className = 'preset-chip';
+    c.textContent = `${p.emoji} ${p.name}`;
+    c.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById('itemName').value = p.name;
+      selectedEmoji = p.emoji;
+      const isRev = editing.type === 'revenu';
+      const emojis = isRev ? EMOJIS_REV : EMOJIS_ENV;
+      renderEmojiPick(emojis, isRev);
+    };
+    row.appendChild(c);
+  });
+}
+
+// ============================================================
+// CALENDRIER
+// ============================================================
 let calCurrentMonth = new Date();
 calCurrentMonth.setDate(1);
 
@@ -320,7 +666,6 @@ function updateDateButton() {
 }
 
 function openCalendar() {
-  // Initialiser le mois affiché sur la date sélectionnée si elle existe, sinon aujourd'hui
   const val = document.getElementById('itemDate').value;
   if (val) {
     const d = new Date(val + 'T00:00:00');
@@ -346,13 +691,10 @@ function renderCalendar() {
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
 
-  // Premier jour du mois
   const firstDay = new Date(year, month, 1);
-  // Lundi = 0, Dimanche = 6 (ajustement pour FR)
   let startWeekday = firstDay.getDay() - 1;
   if (startWeekday < 0) startWeekday = 6;
 
-  // Jours du mois précédent
   const prevMonthLastDay = new Date(year, month, 0).getDate();
   for (let i = startWeekday - 1; i >= 0; i--) {
     const d = document.createElement('button');
@@ -363,7 +705,6 @@ function renderCalendar() {
     grid.appendChild(d);
   }
 
-  // Jours du mois courant
   const lastDay = new Date(year, month + 1, 0).getDate();
   const today = new Date(); today.setHours(0,0,0,0);
   const selectedVal = document.getElementById('itemDate').value;
@@ -390,7 +731,6 @@ function renderCalendar() {
     grid.appendChild(btn);
   }
 
-  // Jours du mois suivant pour compléter la dernière ligne
   const totalCells = grid.children.length;
   const remaining = (7 - (totalCells % 7)) % 7;
   for (let i = 1; i <= remaining; i++) {
@@ -403,9 +743,200 @@ function renderCalendar() {
   }
 }
 
-document.getElementById('itemDateBtn').addEventListener('click', function(e) {
-  e.preventDefault();
+// ============================================================
+// EVENTS
+// ============================================================
+
+// Écrans d'authentification
+document.getElementById('goSignupBtn').onclick = () => showScreen('signupScreen');
+document.getElementById('goLoginBtn').onclick = () => showScreen('loginScreen');
+document.getElementById('switchToLogin').onclick = () => showScreen('loginScreen');
+document.getElementById('switchToSignup').onclick = () => showScreen('signupScreen');
+
+document.getElementById('signupSubmitBtn').onclick = () => {
+  signUp(
+    document.getElementById('signupEmail').value.trim(),
+    document.getElementById('signupPassword').value
+  );
+};
+
+document.getElementById('loginSubmitBtn').onclick = () => {
+  signIn(
+    document.getElementById('loginEmail').value.trim(),
+    document.getElementById('loginPassword').value
+  );
+};
+
+// Enter key dans les champs
+['signupEmail','signupPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('signupSubmitBtn').click();
+  });
+});
+['loginEmail','loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('loginSubmitBtn').click();
+  });
+});
+
+document.getElementById('forgotPassword').onclick = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) {
+    alert('Entre ton courriel dans le champ ci-dessus d\'abord');
+    return;
+  }
+  try {
+    await supabaseClient.auth.resetPasswordForEmail(email);
+    alert('Si ce courriel a un compte, tu vas recevoir un lien pour réinitialiser ton mot de passe.');
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+};
+
+// Menu utilisateur
+document.getElementById('userBtn').onclick = (e) => {
   e.stopPropagation();
+  document.getElementById('userDropdown').classList.toggle('show');
+};
+document.addEventListener('click', () => {
+  document.getElementById('userDropdown').classList.remove('show');
+});
+
+document.getElementById('logoutBtn').onclick = () => {
+  if (confirm('Te déconnecter?')) signOut();
+};
+
+document.getElementById('upgradeBtn').onclick = () => {
+  alert('🚧 Bientôt disponible! La page d\'abonnement PRO arrive sous peu.');
+};
+
+// App
+document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
+document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
+document.getElementById('cancelBtn').onclick = closeModal;
+
+document.getElementById('saveBtn').onclick = async () => {
+  const name = document.getElementById('itemName').value.trim();
+  const amount = parseFloat(document.getElementById('itemAmount').value) || 0;
+  const date = document.getElementById('itemDate').value;
+  if (!name) { alert('Donne un nom'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde…';
+
+  if (editing.type === 'revenu') {
+    if (editing.id) {
+      const r = state.revenus.find(x => x.id === editing.id);
+      if (r) {
+        r.name = name; r.amount = amount; r.emoji = selectedEmoji; r.date = date;
+        await saveRevenu(r, false);
+      }
+    } else {
+      const newRev = {
+        emoji: selectedEmoji, name, amount, date,
+        received: false
+      };
+      const saved = await saveRevenu(newRev, true);
+      if (saved) {
+        state.revenus.push({
+          id: saved.id,
+          emoji: saved.emoji,
+          name: saved.name,
+          amount: parseFloat(saved.amount),
+          date: saved.date || '',
+          received: saved.received
+        });
+      }
+    }
+  } else {
+    if (editing.id) {
+      const e = state.envelopes.find(x => x.id === editing.id);
+      if (e) {
+        e.name = name; e.amount = amount; e.emoji = selectedEmoji;
+        await saveEnvelope(e, false);
+      }
+    } else {
+      const newEnv = { emoji: selectedEmoji, name, amount, allocated: false };
+      const saved = await saveEnvelope(newEnv, true);
+      if (saved) {
+        state.envelopes.push({
+          id: saved.id,
+          emoji: saved.emoji,
+          name: saved.name,
+          amount: parseFloat(saved.amount),
+          allocated: saved.allocated
+        });
+      }
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enregistrer';
+  closeModal();
+  render();
+};
+
+document.getElementById('deleteBtn').onclick = async () => {
+  if (!editing.id) return;
+  if (!confirm('Supprimer cet élément?')) return;
+  if (editing.type === 'revenu') {
+    await deleteRevenu(editing.id);
+    state.revenus = state.revenus.filter(r => r.id !== editing.id);
+  } else {
+    await deleteEnvelope(editing.id);
+    state.envelopes = state.envelopes.filter(e => e.id !== editing.id);
+  }
+  closeModal();
+  render();
+};
+
+document.body.addEventListener('click', async e => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.revToggle) {
+    const r = state.revenus.find(x => x.id === t.dataset.revToggle);
+    if (r) {
+      r.received = !r.received;
+      await saveRevenu(r, false);
+      render();
+    }
+  } else if (t.dataset.revEdit) {
+    const r = state.revenus.find(x => x.id === t.dataset.revEdit);
+    if (r) openModal('revenu', r);
+  } else if (t.dataset.envToggle) {
+    const e2 = state.envelopes.find(x => x.id === t.dataset.envToggle);
+    if (e2) {
+      e2.allocated = !e2.allocated;
+      await saveEnvelope(e2, false);
+      render();
+    }
+  } else if (t.dataset.envEdit) {
+    const e2 = state.envelopes.find(x => x.id === t.dataset.envEdit);
+    if (e2) openModal('envelope', e2);
+  }
+});
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+document.getElementById('resetBtn').onclick = async () => {
+  if (!confirm('Effacer TOUTES tes données et recommencer à zéro? Cette action est irréversible.')) return;
+
+  try {
+    await supabaseClient.from('revenus').delete().eq('user_id', currentUser.id);
+    await supabaseClient.from('envelopes').delete().eq('user_id', currentUser.id);
+    state = { revenus: [], envelopes: [] };
+    render();
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+};
+
+// Calendrier events
+document.getElementById('itemDateBtn').addEventListener('click', function(e) {
+  e.preventDefault(); e.stopPropagation();
   openCalendar();
 });
 document.getElementById('calOverlay').addEventListener('click', function(e) {
@@ -439,130 +970,7 @@ document.getElementById('calClear').addEventListener('click', function(e) {
   closeCalendar();
 });
 
-function closeModal() {
-  document.getElementById('modal').classList.remove('show');
-  editing = { type: null, id: null };
-}
-
-function renderEmojiPick(emojis, isRev) {
-  const box = document.getElementById('emojiPick');
-  box.innerHTML = '';
-  emojis.forEach(em => {
-    const b = document.createElement('button');
-    b.textContent = em;
-    if (em === selectedEmoji) {
-      b.classList.add('sel');
-      if (isRev) b.classList.add('green');
-    }
-    b.onclick = (e) => {
-      e.preventDefault();
-      selectedEmoji = em;
-      renderEmojiPick(emojis, isRev);
-    };
-    box.appendChild(b);
-  });
-}
-
-function renderPresets(presets) {
-  const row = document.getElementById('presetRow');
-  row.innerHTML = '';
-  presets.forEach(p => {
-    const c = document.createElement('button');
-    c.className = 'preset-chip';
-    c.textContent = `${p.emoji} ${p.name}`;
-    c.onclick = (e) => {
-      e.preventDefault();
-      document.getElementById('itemName').value = p.name;
-      selectedEmoji = p.emoji;
-      const isRev = editing.type === 'revenu';
-      const emojis = isRev ? EMOJIS_REV : EMOJIS_ENV;
-      renderEmojiPick(emojis, isRev);
-    };
-    row.appendChild(c);
-  });
-}
-
-// =======================================================
-// Events
-// =======================================================
-document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
-document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
-document.getElementById('cancelBtn').onclick = closeModal;
-
-document.getElementById('saveBtn').onclick = () => {
-  const name = document.getElementById('itemName').value.trim();
-  const amount = parseFloat(document.getElementById('itemAmount').value) || 0;
-  const date = document.getElementById('itemDate').value;
-  if (!name) { alert('Donne un nom'); return; }
-
-  if (editing.type === 'revenu') {
-    if (editing.id) {
-      const r = state.revenus.find(x => x.id === editing.id);
-      if (r) { r.name = name; r.amount = amount; r.emoji = selectedEmoji; r.date = date; }
-    } else {
-      state.revenus.push({
-        id: 'r_' + Date.now() + Math.random().toString(36).slice(2,6),
-        emoji: selectedEmoji, name, amount, date,
-        received: false
-      });
-    }
-  } else {
-    if (editing.id) {
-      const e = state.envelopes.find(x => x.id === editing.id);
-      if (e) { e.name = name; e.amount = amount; e.emoji = selectedEmoji; }
-    } else {
-      state.envelopes.push({
-        id: 'e_' + Date.now() + Math.random().toString(36).slice(2,6),
-        emoji: selectedEmoji, name, amount,
-        allocated: false
-      });
-    }
-  }
-  closeModal();
-  render();
-};
-
-document.getElementById('deleteBtn').onclick = () => {
-  if (!editing.id) return;
-  if (!confirm('Supprimer cet élément?')) return;
-  if (editing.type === 'revenu') {
-    state.revenus = state.revenus.filter(r => r.id !== editing.id);
-  } else {
-    state.envelopes = state.envelopes.filter(e => e.id !== editing.id);
-  }
-  closeModal();
-  render();
-};
-
-document.body.addEventListener('click', e => {
-  const t = e.target.closest('button');
-  if (!t) return;
-  if (t.dataset.revToggle) {
-    const r = state.revenus.find(x => x.id === t.dataset.revToggle);
-    if (r) { r.received = !r.received; render(); }
-  } else if (t.dataset.revEdit) {
-    const r = state.revenus.find(x => x.id === t.dataset.revEdit);
-    if (r) openModal('revenu', r);
-  } else if (t.dataset.envToggle) {
-    const e2 = state.envelopes.find(x => x.id === t.dataset.envToggle);
-    if (e2) { e2.allocated = !e2.allocated; render(); }
-  } else if (t.dataset.envEdit) {
-    const e2 = state.envelopes.find(x => x.id === t.dataset.envEdit);
-    if (e2) openModal('envelope', e2);
-  }
-});
-
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target.id === 'modal') closeModal();
-});
-
-document.getElementById('resetBtn').onclick = () => {
-  if (confirm('Effacer toutes les données et recommencer à zéro?')) {
-    state = { revenus: [], envelopes: [] };
-    save(); render();
-  }
-};
-
-// Init
-load();
-render();
+// ============================================================
+// INIT
+// ============================================================
+checkAuth();

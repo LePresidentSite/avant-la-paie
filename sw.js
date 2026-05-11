@@ -1,8 +1,9 @@
-const CACHE = 'avantlapaie-v2';
+const CACHE = 'avantlapaie-v3';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
+  './config.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -24,6 +25,9 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Ne pas mettre en cache les appels Supabase
+  if (e.request.url.includes('supabase.co')) return;
+
   e.respondWith(
     fetch(e.request).then(resp => {
       const copy = resp.clone();

@@ -44,17 +44,192 @@
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
 
+  /* ============================================
+     PAGE D'AUTHENTIFICATION (welcome / signup / login)
+     ============================================ */
+  .auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+
+  .auth-logo {
+    font-weight: 800;
+    font-size: 38px;
+    letter-spacing: -0.03em;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .auth-logo span { color: var(--accent); }
+
+  .auth-tagline {
+    color: var(--ink-soft);
+    font-size: 15px;
+    font-style: italic;
+    margin-bottom: 36px;
+    line-height: 1.5;
+  }
+
+  .auth-form {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 22px;
+    text-align: left;
+    margin-bottom: 18px;
+  }
+
+  .auth-form h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-style: italic;
+  }
+
+  .auth-form .subtitle {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-bottom: 22px;
+    font-style: italic;
+  }
+
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .auth-input {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 600;
+    transition: border-color 0.2s;
+  }
+  .auth-input:focus { outline: none; border-color: var(--accent); }
+  .auth-input::placeholder { color: var(--ink-soft); opacity: 0.5; }
+
+  .auth-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+  }
+  .auth-btn:active { transform: scale(0.98); }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+
+  .auth-switch {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-top: 14px;
+  }
+  .auth-switch a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .auth-error {
+    background: rgba(229,49,112,0.12);
+    border: 1px solid rgba(229,49,112,0.3);
+    color: #ff7ba6;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+
+  .auth-success {
+    background: rgba(44,182,125,0.12);
+    border: 1px solid rgba(44,182,125,0.3);
+    color: #6ce0a8;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .auth-success.show { display: block; }
+
+  .auth-features {
+    margin-top: 24px;
+    text-align: left;
+    color: var(--ink-soft);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .auth-features div { margin-bottom: 4px; }
+
+  .auth-trial-badge {
+    display: inline-block;
+    background: rgba(255,137,6,0.15);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  /* ============================================
+     APP PRINCIPALE
+     ============================================ */
   .app {
     max-width: 520px;
     margin: 0 auto;
     padding: 24px 20px 60px;
+    display: none;
   }
+  .app.show { display: block; }
 
   header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
+  }
+  header .top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .logo {
@@ -73,7 +248,75 @@
     letter-spacing: 0.1em;
   }
 
-  /* SECTION TITRES */
+  .user-menu {
+    position: relative;
+  }
+  .user-btn {
+    background: rgba(255,255,254,0.06);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .user-btn:active { background: rgba(255,255,254,0.12); }
+
+  .user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px;
+    min-width: 200px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+    z-index: 50;
+    display: none;
+  }
+  .user-dropdown.show { display: block; }
+  .user-dropdown .user-info {
+    padding: 10px 12px;
+    border-bottom: 1px dashed var(--line);
+    margin-bottom: 6px;
+  }
+  .user-dropdown .user-email {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+    word-break: break-all;
+  }
+  .user-dropdown .user-plan {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .user-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .user-dropdown button:hover { background: rgba(255,255,254,0.06); }
+  .user-dropdown button.danger { color: var(--warn); }
+
   .section-title {
     display: flex;
     align-items: baseline;
@@ -91,7 +334,6 @@
     color: var(--ink-soft);
   }
 
-  /* CARTE DE TOTAL REVENUS */
   .total-revenus {
     background: linear-gradient(140deg, rgba(44,182,125,0.12), var(--surface));
     border: 1px solid rgba(44,182,125,0.25);
@@ -134,7 +376,6 @@
   }
   .total-revenus .countdown b { color: var(--good); font-size: 14px; }
 
-  /* CARTE D'ITEM (revenu ou enveloppe) */
   .item {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -146,8 +387,7 @@
     transition: transform 0.15s, border-color 0.2s;
     margin-bottom: 8px;
   }
-  .item.received { border-color: rgba(44,182,125,0.35); }
-  .item.allocated { border-color: rgba(44,182,125,0.35); }
+  .item.received, .item.allocated { border-color: rgba(44,182,125,0.35); }
   .item:active { transform: scale(0.98); }
 
   .item-emoji {
@@ -204,7 +444,6 @@
     color: var(--bg);
   }
 
-  /* RESTE À ALLOUER - le HÉROS visuel */
   .remaining {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -224,7 +463,6 @@
     color: var(--ink-soft);
     margin-bottom: 10px;
   }
-
   .remaining .amount {
     font-size: 56px;
     font-weight: 800;
@@ -233,18 +471,15 @@
     font-style: italic;
     transition: color 0.3s;
   }
-
   .remaining .amount.good { color: var(--good); }
   .remaining .amount.warn { color: var(--accent); }
   .remaining .amount.over { color: var(--warn); }
-
   .remaining .sub {
     margin-top: 8px;
     font-size: 13px;
     color: var(--ink-soft);
     font-style: italic;
   }
-
   .progress-bar {
     height: 6px;
     background: rgba(255,255,254,0.06);
@@ -259,7 +494,6 @@
     transition: width 0.4s ease;
   }
 
-  /* BOUTONS AJOUTER (par section) */
   .add-inline {
     width: 100%;
     background: rgba(255,255,254,0.04);
@@ -339,7 +573,7 @@
   .field-row { display: flex; gap: 10px; }
   .field-row > .field { flex: 1; margin-bottom: 14px; }
 
-  input[type="number"], input[type="date"], input[type="text"] {
+  input[type="number"], input[type="date"], input[type="text"], input[type="email"], input[type="password"] {
     width: 100%;
     background: rgba(0,0,0,0.25);
     border: 1px solid var(--line);
@@ -354,24 +588,30 @@
     appearance: none;
     min-height: 48px;
   }
-  input[type="date"] {
-    display: block;
-    cursor: pointer;
-  }
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
-    opacity: 0.6;
-    cursor: pointer;
-  }
-  input[type="date"]::-webkit-date-and-time-value {
-    text-align: left;
-  }
   input:focus { outline: none; border-color: var(--accent); }
   input::placeholder { color: var(--ink-soft); opacity: 0.5; }
 
-  .emoji-pick {
-    display: flex; flex-wrap: wrap; gap: 8px;
+  .date-trigger {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
+  .date-trigger.empty { color: var(--ink-soft); opacity: 0.5; }
+  .date-trigger:active { border-color: var(--accent); }
+
+  .emoji-pick { display: flex; flex-wrap: wrap; gap: 8px; }
   .emoji-pick button {
     background: rgba(255,255,254,0.05);
     border: 2px solid transparent;
@@ -380,18 +620,10 @@
     font-size: 22px;
     cursor: pointer;
   }
-  .emoji-pick button.sel {
-    border-color: var(--accent);
-    background: rgba(255,137,6,0.12);
-  }
-  .emoji-pick button.sel.green {
-    border-color: var(--good);
-    background: rgba(44,182,125,0.12);
-  }
+  .emoji-pick button.sel { border-color: var(--accent); background: rgba(255,137,6,0.12); }
+  .emoji-pick button.sel.green { border-color: var(--good); background: rgba(44,182,125,0.12); }
 
-  .modal-actions {
-    display: flex; gap: 10px; margin-top: 22px;
-  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
   .btn {
     flex: 1;
     padding: 14px;
@@ -407,12 +639,7 @@
   .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
   .btn-danger { background: rgba(229,49,112,0.15); color: var(--warn); }
 
-  /* PRESETS */
-  .presets {
-    margin-top: 12px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--line);
-  }
+  .presets { margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--line); }
   .presets-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -434,38 +661,7 @@
   }
   .preset-chip:active { background: rgba(255,137,6,0.15); }
 
-  .reset-link {
-    display: block;
-    text-align: center;
-    margin-top: 24px;
-    color: var(--ink-soft);
-    font-size: 12px;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
   /* CALENDRIER CUSTOM */
-  .date-trigger {
-    width: 100%;
-    background: rgba(0,0,0,0.25);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    padding: 12px 14px;
-    border-radius: 12px;
-    font-family: 'Fraunces', serif;
-    font-size: 16px;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .date-trigger.empty { color: var(--ink-soft); opacity: 0.5; }
-  .date-trigger:active { border-color: var(--accent); }
-  .date-trigger .cal-icon { font-size: 18px; }
-
   .cal-overlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.7);
@@ -493,22 +689,9 @@
     to { opacity: 1; transform: scale(1); }
   }
 
-  .cal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .cal-title {
-    font-size: 18px;
-    font-weight: 700;
-    font-style: italic;
-    text-transform: capitalize;
-  }
-  .cal-nav {
-    display: flex;
-    gap: 6px;
-  }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-title { font-size: 18px; font-weight: 700; font-style: italic; text-transform: capitalize; }
+  .cal-nav { display: flex; gap: 6px; }
   .cal-nav button {
     background: rgba(255,255,254,0.06);
     border: none;
@@ -523,13 +706,7 @@
     justify-content: center;
   }
   .cal-nav button:active { background: rgba(255,255,254,0.14); }
-
-  .cal-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    margin-bottom: 6px;
-  }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
   .cal-weekdays div {
     text-align: center;
     font-family: 'JetBrains Mono', monospace;
@@ -539,12 +716,7 @@
     letter-spacing: 0.1em;
     padding: 6px 0;
   }
-
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
   .cal-day {
     aspect-ratio: 1;
     background: transparent;
@@ -563,50 +735,166 @@
   .cal-day:hover { background: rgba(255,255,254,0.05); }
   .cal-day:active { transform: scale(0.92); }
   .cal-day.other { color: var(--ink-soft); opacity: 0.3; }
-  .cal-day.today {
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 700;
-  }
-  .cal-day.selected {
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 700;
-  }
-  .cal-day.selected.today { border-color: var(--accent); }
-
-  .cal-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--line);
-  }
+  .cal-day.today { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .cal-day.selected { background: var(--accent); color: var(--bg); font-weight: 700; }
+  .cal-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
   .cal-actions button {
-    flex: 1;
-    padding: 10px;
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink-soft);
-    border-radius: 10px;
-    font-family: 'Fraunces', serif;
-    font-size: 13px;
+    flex: 1; padding: 10px;
+    background: transparent; border: 1px solid var(--line);
+    color: var(--ink-soft); border-radius: 10px;
+    font-family: 'Fraunces', serif; font-size: 13px;
     cursor: pointer;
   }
   .cal-actions button:active { background: rgba(255,255,254,0.06); color: var(--ink); }
   .cal-actions button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+
+  /* LOADING */
+  .loading-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--ink-soft);
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid rgba(255,137,6,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .reset-link {
+    display: block;
+    text-align: center;
+    margin-top: 24px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
-<div class="app">
+<!-- ÉCRAN DE CHARGEMENT INITIAL -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div>Chargement…</div>
+</div>
+
+<!-- ÉCRAN WELCOME (avant connexion) -->
+<div class="auth-screen" id="welcomeScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">avant<span>.</span>la paie</div>
+    <div class="auth-tagline">Le budget pensé pour cerveaux TDAH ✨<br>Planifie avant que la paie arrive.</div>
+
+    <div class="auth-form">
+      <div class="auth-trial-badge">30 jours d'essai gratuit</div>
+      <h2>Bienvenue!</h2>
+      <div class="subtitle">Crée ton compte pour commencer</div>
+
+      <button class="auth-btn" id="goSignupBtn">Créer un compte</button>
+      <button class="auth-btn ghost" id="goLoginBtn" style="margin-top:10px;">J'ai déjà un compte</button>
+    </div>
+
+    <div class="auth-features">
+      <div>✓ Sources de revenus illimitées</div>
+      <div>✓ Enveloppes de dépenses illimitées</div>
+      <div>✓ Calendrier intégré</div>
+      <div>✓ Sauvegarde sécurisée</div>
+      <div>✓ 30 jours d'essai, sans engagement</div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN INSCRIPTION -->
+<div class="auth-screen" id="signupScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">avant<span>.</span>la paie</div>
+    <div class="auth-form">
+      <h2>Créer mon compte</h2>
+      <div class="subtitle">30 jours d'essai gratuit · annulable à tout moment</div>
+
+      <div class="auth-error" id="signupError"></div>
+      <div class="auth-success" id="signupSuccess"></div>
+
+      <div class="auth-field">
+        <label>Courriel</label>
+        <input type="email" class="auth-input" id="signupEmail" placeholder="ton@courriel.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Mot de passe</label>
+        <input type="password" class="auth-input" id="signupPassword" placeholder="8 caractères minimum" autocomplete="new-password">
+      </div>
+
+      <button class="auth-btn" id="signupSubmitBtn">Créer mon compte</button>
+
+      <div class="auth-switch">
+        Déjà un compte? <a id="switchToLogin">Se connecter</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN CONNEXION -->
+<div class="auth-screen" id="loginScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">avant<span>.</span>la paie</div>
+    <div class="auth-form">
+      <h2>Connexion</h2>
+      <div class="subtitle">Heureux de te revoir 🧡</div>
+
+      <div class="auth-error" id="loginError"></div>
+
+      <div class="auth-field">
+        <label>Courriel</label>
+        <input type="email" class="auth-input" id="loginEmail" placeholder="ton@courriel.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Mot de passe</label>
+        <input type="password" class="auth-input" id="loginPassword" placeholder="Ton mot de passe" autocomplete="current-password">
+      </div>
+
+      <button class="auth-btn" id="loginSubmitBtn">Se connecter</button>
+
+      <div class="auth-switch">
+        Pas encore de compte? <a id="switchToSignup">Créer un compte</a>
+      </div>
+      <div class="auth-switch" style="margin-top:8px;">
+        <a id="forgotPassword" style="font-size:12px;">Mot de passe oublié?</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP PRINCIPALE (après connexion) -->
+<div class="app" id="mainApp">
 
   <header>
-    <div class="logo">avant<span>.</span>la paie</div>
-    <div class="date" id="todayDate"></div>
+    <div class="top-row">
+      <div class="logo">avant<span>.</span>la paie</div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div class="date" id="todayDate"></div>
+        <div class="user-menu">
+          <button class="user-btn" id="userBtn">U</button>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="user-info">
+              <div class="user-email" id="userEmail">utilisateur@exemple.com</div>
+              <div class="user-plan" id="userPlan">⏳ Essai · 30 jours restants</div>
+            </div>
+            <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
+            <button class="danger" id="logoutBtn">Déconnexion</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <!-- SECTION REVENUS -->
+  <!-- REVENUS -->
   <div class="section-title">
     <h2>Mes revenus</h2>
     <span id="revenusCount">0 / 0 reçus</span>
@@ -622,7 +910,7 @@
 
   <button class="add-inline green" id="addRevenuBtn">+ Ajouter une source de revenu</button>
 
-  <!-- RESTE À ALLOUER -->
+  <!-- RESTE -->
   <div class="remaining">
     <div class="label">Reste à allouer</div>
     <div class="amount" id="remainingAmount">0 $</div>
@@ -641,7 +929,6 @@
   <button class="add-inline orange" id="addEnvBtn">+ Ajouter une enveloppe de dépense</button>
 
   <a class="reset-link" id="resetBtn">Tout réinitialiser</a>
-
 </div>
 
 <!-- Modal -->
@@ -667,7 +954,7 @@
       <div class="field" id="dateField">
         <label>Date prévue</label>
         <button type="button" class="date-trigger empty" id="itemDateBtn">
-          <span class="cal-icon">📅</span>
+          <span>📅</span>
           <span id="itemDateLabel">Choisir une date</span>
         </button>
         <input type="hidden" id="itemDate">
@@ -709,6 +996,9 @@
   </div>
 </div>
 
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
