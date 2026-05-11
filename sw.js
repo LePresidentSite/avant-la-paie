@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v3';
+const CACHE = 'avantlapaie-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -25,8 +25,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  // Ne pas mettre en cache les appels Supabase
+  // Ne pas mettre en cache les appels API
   if (e.request.url.includes('supabase.co')) return;
+  if (e.request.url.includes('vercel.app')) return;
+  if (e.request.url.includes('stripe.com')) return;
 
   e.respondWith(
     fetch(e.request).then(resp => {

@@ -871,6 +871,47 @@
   </div>
 </div>
 
+<!-- ÉCRAN PRO (page abonnement) -->
+<div class="auth-screen" id="proScreen" style="display:none;">
+  <div class="auth-card" style="max-width: 480px;">
+    <button class="auth-btn ghost" id="proBackBtn" style="margin-bottom:20px; padding:8px 16px; font-size:14px; width:auto; display:inline-block;">← Retour</button>
+
+    <div class="auth-logo" style="margin-bottom: 8px;">Passer à <span>PRO</span> ✨</div>
+    <div class="auth-tagline">30 jours d'essai gratuit. Annule à tout moment.</div>
+
+    <!-- Plan Annuel (mis en avant) -->
+    <div class="auth-form" style="border-color: var(--accent); position: relative; margin-bottom: 14px;">
+      <div style="position: absolute; top: -12px; left: 22px; background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;">ÉCONOMISE 33 %</div>
+      <h2 style="margin-bottom: 4px;">Annuel</h2>
+      <div style="font-size: 36px; font-weight: 800; font-style: italic; color: var(--accent); letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">39,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">/ an</span></div>
+      <div class="subtitle" style="margin-bottom: 16px;">Soit 3,33 $/mois · 30 jours gratuits</div>
+      <button class="auth-btn" id="subscribeYearlyBtn">Commencer l'essai gratuit</button>
+    </div>
+
+    <!-- Plan Mensuel -->
+    <div class="auth-form" style="margin-bottom: 14px;">
+      <h2 style="margin-bottom: 4px;">Mensuel</h2>
+      <div style="font-size: 30px; font-weight: 700; font-style: italic; letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">4,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">/ mois</span></div>
+      <div class="subtitle" style="margin-bottom: 16px;">30 jours gratuits · sans engagement</div>
+      <button class="auth-btn ghost" id="subscribeMonthlyBtn">Commencer l'essai gratuit</button>
+    </div>
+
+    <div class="auth-features" style="margin-top: 24px;">
+      <div style="margin-bottom: 8px; color: var(--ink); font-weight: 600;">Inclus dans PRO :</div>
+      <div>✓ Sources de revenus illimitées</div>
+      <div>✓ Enveloppes de dépenses illimitées</div>
+      <div>✓ Sauvegarde automatique dans le nuage</div>
+      <div>✓ Synchronisation entre tous tes appareils</div>
+      <div>✓ Calendrier intégré</div>
+      <div>✓ Support par courriel</div>
+    </div>
+
+    <div class="auth-switch" style="margin-top: 20px; font-size: 12px;">
+      Paiement sécurisé par Stripe · Tu peux annuler à tout moment
+    </div>
+  </div>
+</div>
+
 <!-- APP PRINCIPALE (après connexion) -->
 <div class="app" id="mainApp">
 

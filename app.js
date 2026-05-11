@@ -41,6 +41,7 @@ const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','
 
 // État global
 let currentUser = null;
+let currentSubscription = null;
 let state = {
   revenus: [],
   envelopes: []
@@ -53,8 +54,9 @@ let selectedEmoji = '💼';
 // GESTION DES ÉCRANS
 // ============================================================
 function showScreen(screenId) {
-  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
+  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
   document.getElementById('mainApp').classList.remove('show');
 
@@ -75,9 +77,12 @@ async function checkAuth() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       currentUser = session.user;
+      await loadSubscription();
       await loadUserData();
       showScreen('main');
       render();
+      // Vérifier si retour de paiement
+      checkPaymentReturn();
     } else {
       showScreen('welcomeScreen');
     }
@@ -85,6 +90,52 @@ async function checkAuth() {
     console.error('Erreur auth:', e);
     showScreen('welcomeScreen');
   }
+}
+
+// Vérifier le statut d'abonnement
+async function loadSubscription() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (!error && data) {
+      currentSubscription = data;
+    } else {
+      currentSubscription = null;
+    }
+  } catch (e) {
+    currentSubscription = null;
+  }
+}
+
+// Vérifier si on revient d'un paiement
+function checkPaymentReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paiement = urlParams.get('paiement');
+
+  if (paiement === 'success') {
+    // Nettoyer l'URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Recharger le statut après quelques secondes (le temps que le webhook arrive)
+    setTimeout(async () => {
+      await loadSubscription();
+      render();
+      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux annuler à tout moment.');
+    }, 2000);
+  } else if (paiement === 'annule') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+// Statut PRO?
+function isProUser() {
+  if (!currentSubscription) return false;
+  const status = currentSubscription.status;
+  return status === 'active' || status === 'trialing';
 }
 
 // Inscription
@@ -139,6 +190,7 @@ async function signUp(email, password) {
       if (data.session) {
         currentUser = data.user;
         await initUserProfile();
+        await loadSubscription();
         await loadUserData();
         showScreen('main');
         render();
@@ -188,6 +240,7 @@ async function signIn(email, password) {
     }
 
     currentUser = data.user;
+    await loadSubscription();
     await loadUserData();
     showScreen('main');
     render();
@@ -205,6 +258,7 @@ async function signIn(email, password) {
 async function signOut() {
   await supabaseClient.auth.signOut();
   currentUser = null;
+  currentSubscription = null;
   state = { revenus: [], envelopes: [] };
   showScreen('welcomeScreen');
 }
@@ -431,10 +485,41 @@ function render() {
     document.getElementById('userBtn').textContent = initial;
     document.getElementById('userEmail').textContent = email;
 
-    const daysLeft = getTrialDaysLeft();
-    document.getElementById('userPlan').textContent =
-      daysLeft > 0 ? `⏳ Essai · ${daysLeft} jour${daysLeft>1?'s':''} restant${daysLeft>1?'s':''}`
-                   : '⚠️ Essai terminé';
+    // Statut PRO vs Essai
+    const planEl = document.getElementById('userPlan');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+
+    if (currentSubscription) {
+      const status = currentSubscription.status;
+      if (status === 'trialing') {
+        const periodEnd = currentSubscription.current_period_end;
+        if (periodEnd) {
+          const daysLeft = Math.ceil((new Date(periodEnd) - new Date()) / 86400000);
+          planEl.textContent = daysLeft > 0 ? `⏳ Essai PRO · ${daysLeft}j restants` : '✨ PRO actif';
+        } else {
+          planEl.textContent = '⏳ Essai PRO actif';
+        }
+        upgradeBtn.style.display = 'none';
+      } else if (status === 'active') {
+        planEl.textContent = '✨ PRO actif';
+        planEl.style.color = 'var(--good)';
+        upgradeBtn.style.display = 'none';
+      } else if (status === 'past_due') {
+        planEl.textContent = '⚠️ Paiement en attente';
+        planEl.style.color = 'var(--warn)';
+        upgradeBtn.style.display = 'block';
+      } else {
+        // canceled, etc
+        const daysLeft = getTrialDaysLeft();
+        planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+        upgradeBtn.style.display = 'block';
+      }
+    } else {
+      // Pas d'abonnement = en essai gratuit (calculé depuis la date d'inscription)
+      const daysLeft = getTrialDaysLeft();
+      planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+      upgradeBtn.style.display = 'block';
+    }
   }
 
   // Total revenus
@@ -807,8 +892,59 @@ document.getElementById('logoutBtn').onclick = () => {
 };
 
 document.getElementById('upgradeBtn').onclick = () => {
-  alert('🚧 Bientôt disponible! La page d\'abonnement PRO arrive sous peu.');
+  document.getElementById('userDropdown').classList.remove('show');
+  showScreen('proScreen');
 };
+
+// Bouton retour sur la page PRO
+document.getElementById('proBackBtn').onclick = () => {
+  showScreen('main');
+};
+
+// Fonction pour démarrer un abonnement
+async function startSubscription(plan) {
+  if (!currentUser) {
+    alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  const btn = plan === 'yearly' ? document.getElementById('subscribeYearlyBtn') : document.getElementById('subscribeMonthlyBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Redirection vers Stripe…';
+
+  try {
+    const response = await fetch(`${API_URL}/api/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan: plan,
+        userId: currentUser.id,
+        userEmail: currentUser.email
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (data.url) {
+      // Rediriger vers Stripe Checkout
+      window.location.href = data.url;
+    } else {
+      throw new Error('Pas d\'URL de paiement reçue');
+    }
+  } catch (e) {
+    alert('Erreur : ' + e.message + '\n\nVérifie ta connexion Internet et réessaie.');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('subscribeMonthlyBtn').onclick = () => startSubscription('monthly');
+document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription('yearly');
 
 // App
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
