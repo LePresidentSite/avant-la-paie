@@ -140,7 +140,7 @@ function isProUser() {
 }
 
 // Inscription
-async function signUp(email, password) {
+async function signUp(email, password, passwordConfirm) {
   const errorEl = document.getElementById('signupError');
   const successEl = document.getElementById('signupSuccess');
   const btn = document.getElementById('signupSubmitBtn');
@@ -148,8 +148,13 @@ async function signUp(email, password) {
   errorEl.classList.remove('show');
   successEl.classList.remove('show');
 
-  if (!email || !password) {
+  if (!email || !password || !passwordConfirm) {
     errorEl.textContent = 'Remplis tous les champs';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (password !== passwordConfirm) {
+    errorEl.textContent = 'Les deux mots de passe ne sont pas identiques';
     errorEl.classList.add('show');
     return;
   }
@@ -952,7 +957,8 @@ document.getElementById('switchToSignup').onclick = () => showScreen('signupScre
 document.getElementById('signupSubmitBtn').onclick = () => {
   signUp(
     document.getElementById('signupEmail').value.trim(),
-    document.getElementById('signupPassword').value
+    document.getElementById('signupPassword').value,
+    document.getElementById('signupPasswordConfirm').value
   );
 };
 
@@ -964,7 +970,7 @@ document.getElementById('loginSubmitBtn').onclick = () => {
 };
 
 // Enter key dans les champs
-['signupEmail','signupPassword'].forEach(id => {
+['signupEmail','signupPassword','signupPasswordConfirm'].forEach(id => {
   document.getElementById(id).addEventListener('keypress', e => {
     if (e.key === 'Enter') document.getElementById('signupSubmitBtn').click();
   });
