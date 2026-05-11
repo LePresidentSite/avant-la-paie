@@ -49,6 +49,7 @@ let state = {
 
 let editing = { type: null, id: null };
 let selectedEmoji = '💼';
+let selectedRecurrence = 'once';
 
 // ============================================================
 // GESTION DES ÉCRANS
@@ -304,7 +305,8 @@ async function loadUserData() {
         name: r.name,
         amount: parseFloat(r.amount),
         date: r.date || '',
-        received: r.received
+        received: r.received,
+        recurrence: r.recurrence || 'once'
       }));
     }
 
@@ -321,7 +323,8 @@ async function loadUserData() {
         emoji: e.emoji,
         name: e.name,
         amount: parseFloat(e.amount),
-        allocated: e.allocated
+        allocated: e.allocated,
+        recurrence: e.recurrence || 'once'
       }));
     }
   } catch (e) {
@@ -342,7 +345,8 @@ async function saveRevenu(rev, isNew) {
           name: rev.name,
           amount: rev.amount,
           date: rev.date || null,
-          received: rev.received || false
+          received: rev.received || false,
+          recurrence: rev.recurrence || 'once'
         })
         .select()
         .single();
@@ -356,7 +360,8 @@ async function saveRevenu(rev, isNew) {
           name: rev.name,
           amount: rev.amount,
           date: rev.date || null,
-          received: rev.received
+          received: rev.received,
+          recurrence: rev.recurrence || 'once'
         })
         .eq('id', rev.id)
         .eq('user_id', currentUser.id);
@@ -391,7 +396,8 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
-          allocated: env.allocated || false
+          allocated: env.allocated || false,
+          recurrence: env.recurrence || 'once'
         })
         .select()
         .single();
@@ -404,7 +410,8 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
-          allocated: env.allocated
+          allocated: env.allocated,
+          recurrence: env.recurrence || 'once'
         })
         .eq('id', env.id)
         .eq('user_id', currentUser.id);
@@ -458,6 +465,76 @@ function daysUntil(dStr) {
   return Math.round((target - now) / 86400000);
 }
 
+// Étiquettes des récurrences
+function getRecurrenceLabel(rec) {
+  switch (rec) {
+    case 'weekly': return '🔁 Hebdo';
+    case 'biweekly': return '🔁 Aux 2 sem';
+    case 'monthly': return '🔁 Mensuel';
+    case 'quarterly': return '🔁 Trim';
+    case 'yearly': return '🔁 Annuel';
+    default: return '';
+  }
+}
+
+// Compte combien d'éléments sont récurrents
+function countRecurrent() {
+  const recRev = state.revenus.filter(r => r.recurrence && r.recurrence !== 'once').length;
+  const recEnv = state.envelopes.filter(e => e.recurrence && e.recurrence !== 'once').length;
+  return recRev + recEnv;
+}
+
+// Renouveler un cycle: décocher reçus/déposés ET avancer les dates
+async function renewCycle() {
+  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
+
+  const btn = document.getElementById('newCycleBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Renouvellement...';
+
+  try {
+    // Renouveler revenus récurrents
+    for (const r of state.revenus) {
+      if (r.recurrence && r.recurrence !== 'once') {
+        r.received = false;
+        if (r.date) {
+          r.date = advanceDate(r.date, r.recurrence);
+        }
+        await saveRevenu(r, false);
+      }
+    }
+    // Renouveler enveloppes récurrentes
+    for (const e of state.envelopes) {
+      if (e.recurrence && e.recurrence !== 'once') {
+        e.allocated = false;
+        await saveEnvelope(e, false);
+      }
+    }
+    render();
+  } catch (err) {
+    alert('Erreur : ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 Nouveau cycle';
+}
+
+// Avancer une date selon la récurrence
+function advanceDate(dateStr, recurrence) {
+  const d = new Date(dateStr + 'T00:00:00');
+  switch (recurrence) {
+    case 'weekly': d.setDate(d.getDate() + 7); break;
+    case 'biweekly': d.setDate(d.getDate() + 14); break;
+    case 'monthly': d.setMonth(d.getMonth() + 1); break;
+    case 'quarterly': d.setMonth(d.getMonth() + 3); break;
+    case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
+  }
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // Calculer les jours restants de l'essai
 function getTrialDaysLeft() {
   if (!currentUser || !currentUser.user_metadata || !currentUser.user_metadata.trial_started_at) {
@@ -477,6 +554,19 @@ function render() {
   const today = new Date();
   document.getElementById('todayDate').textContent =
     today.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  // Barre "Nouveau cycle" si éléments récurrents
+  const recCount = countRecurrent();
+  const cycleBar = document.getElementById('cycleBar');
+  const cycleText = document.getElementById('cycleBarText');
+  if (recCount > 0) {
+    cycleBar.style.display = 'flex';
+    cycleText.textContent = recCount === 1
+      ? `Tu as 1 élément récurrent`
+      : `Tu as ${recCount} éléments récurrents`;
+  } else {
+    cycleBar.style.display = 'none';
+  }
 
   // Avatar utilisateur
   if (currentUser) {
@@ -568,12 +658,14 @@ function render() {
       else if (days > 0) when = `<span class="when">dans ${days}j</span>`;
       else when = `<span class="when">${formatDateShort(r.date)}</span>`;
     }
+    const recBadge = (r.recurrence && r.recurrence !== 'once')
+      ? `<span class="rec-badge green">${getRecurrenceLabel(r.recurrence)}</span>` : '';
     const div = document.createElement('div');
     div.className = 'item' + (r.received ? ' received' : '');
     div.innerHTML = `
       <div class="item-emoji">${r.emoji}</div>
       <div class="item-info">
-        <div class="item-name">${escapeHtml(r.name)}</div>
+        <div class="item-name">${escapeHtml(r.name)}${recBadge}</div>
         <div class="item-amount"><strong class="green">${fmt(r.amount)}</strong>${when}</div>
       </div>
       <div class="item-actions">
@@ -623,12 +715,14 @@ function render() {
     envBox.appendChild(empty);
   } else {
     state.envelopes.forEach(env => {
+      const recBadge = (env.recurrence && env.recurrence !== 'once')
+        ? `<span class="rec-badge">${getRecurrenceLabel(env.recurrence)}</span>` : '';
       const div = document.createElement('div');
       div.className = 'item' + (env.allocated ? ' allocated' : '');
       div.innerHTML = `
         <div class="item-emoji">${env.emoji}</div>
         <div class="item-info">
-          <div class="item-name">${escapeHtml(env.name)}</div>
+          <div class="item-name">${escapeHtml(env.name)}${recBadge}</div>
           <div class="item-amount">${fmt(env.amount)}</div>
         </div>
         <div class="item-actions">
@@ -675,6 +769,9 @@ function openModal(type, item = null) {
   document.getElementById('itemAmount').value = item ? item.amount : '';
   document.getElementById('itemDate').value = item && item.date ? item.date : '';
   document.getElementById('deleteBtn').style.display = item ? 'block' : 'none';
+
+  selectedRecurrence = item ? (item.recurrence || 'once') : 'once';
+  renderRecurrencePick(isRev);
 
   renderEmojiPick(emojis, isRev);
   renderPresets(presets);
@@ -725,6 +822,20 @@ function renderPresets(presets) {
       renderEmojiPick(emojis, isRev);
     };
     row.appendChild(c);
+  });
+}
+
+function renderRecurrencePick(isRev) {
+  const buttons = document.querySelectorAll('#recurrencePick .rec-btn');
+  buttons.forEach(btn => {
+    const rec = btn.dataset.rec;
+    btn.classList.toggle('sel', rec === selectedRecurrence);
+    btn.classList.toggle('green', isRev);
+    btn.onclick = (e) => {
+      e.preventDefault();
+      selectedRecurrence = rec;
+      renderRecurrencePick(isRev);
+    };
   });
 }
 
@@ -949,6 +1060,9 @@ document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription(
 // App
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
 document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
+
+// Bouton "Nouveau cycle"
+document.getElementById('newCycleBtn').onclick = renewCycle;
 document.getElementById('cancelBtn').onclick = closeModal;
 
 document.getElementById('saveBtn').onclick = async () => {
@@ -966,12 +1080,14 @@ document.getElementById('saveBtn').onclick = async () => {
       const r = state.revenus.find(x => x.id === editing.id);
       if (r) {
         r.name = name; r.amount = amount; r.emoji = selectedEmoji; r.date = date;
+        r.recurrence = selectedRecurrence;
         await saveRevenu(r, false);
       }
     } else {
       const newRev = {
         emoji: selectedEmoji, name, amount, date,
-        received: false
+        received: false,
+        recurrence: selectedRecurrence
       };
       const saved = await saveRevenu(newRev, true);
       if (saved) {
@@ -981,7 +1097,8 @@ document.getElementById('saveBtn').onclick = async () => {
           name: saved.name,
           amount: parseFloat(saved.amount),
           date: saved.date || '',
-          received: saved.received
+          received: saved.received,
+          recurrence: saved.recurrence || 'once'
         });
       }
     }
@@ -990,10 +1107,14 @@ document.getElementById('saveBtn').onclick = async () => {
       const e = state.envelopes.find(x => x.id === editing.id);
       if (e) {
         e.name = name; e.amount = amount; e.emoji = selectedEmoji;
+        e.recurrence = selectedRecurrence;
         await saveEnvelope(e, false);
       }
     } else {
-      const newEnv = { emoji: selectedEmoji, name, amount, allocated: false };
+      const newEnv = {
+        emoji: selectedEmoji, name, amount, allocated: false,
+        recurrence: selectedRecurrence
+      };
       const saved = await saveEnvelope(newEnv, true);
       if (saved) {
         state.envelopes.push({
@@ -1001,7 +1122,8 @@ document.getElementById('saveBtn').onclick = async () => {
           emoji: saved.emoji,
           name: saved.name,
           amount: parseFloat(saved.amount),
-          allocated: saved.allocated
+          allocated: saved.allocated,
+          recurrence: saved.recurrence || 'once'
         });
       }
     }

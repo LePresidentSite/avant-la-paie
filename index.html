@@ -422,6 +422,24 @@
   }
   .item-amount strong.green { color: var(--good); font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
 
+  .rec-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    background: rgba(255,137,6,0.12);
+    color: var(--accent);
+    vertical-align: 1px;
+  }
+  .rec-badge.green {
+    background: rgba(44,182,125,0.12);
+    color: var(--good);
+  }
+
   .item-actions { display: flex; gap: 6px; }
 
   .icon-btn {
@@ -660,6 +678,37 @@
     cursor: pointer;
   }
   .preset-chip:active { background: rgba(255,137,6,0.15); }
+
+  /* RECURRENCE */
+  .recurrence-pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .rec-btn {
+    background: rgba(255,255,254,0.05);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-family: 'Fraunces', serif;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .rec-btn:active { transform: scale(0.95); }
+  .rec-btn.sel {
+    background: rgba(255,137,6,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .rec-btn.green.sel {
+    background: rgba(44,182,125,0.15);
+    border-color: var(--good);
+    color: var(--good);
+  }
 
   /* CALENDRIER CUSTOM */
   .cal-overlay {
@@ -935,6 +984,16 @@
     </div>
   </header>
 
+  <!-- BARRE D'ACTIONS RAPIDES -->
+  <div id="cycleBar" style="display:none; background: linear-gradient(140deg, rgba(255,137,6,0.10), var(--surface)); border: 1px solid rgba(255,137,6,0.25); border-radius: 14px; padding: 12px 16px; margin-bottom: 18px; display:flex; align-items:center; gap:12px;">
+    <div style="flex:1; font-size:13px; color:var(--ink-soft); font-style:italic;">
+      <span id="cycleBarText">Tu as des éléments récurrents</span>
+    </div>
+    <button id="newCycleBtn" style="background:var(--accent); color:var(--bg); border:none; padding:8px 14px; border-radius:10px; font-family:'Fraunces',serif; font-size:13px; font-weight:600; cursor:pointer;">
+      🔄 Nouveau cycle
+    </button>
+  </div>
+
   <!-- REVENUS -->
   <div class="section-title">
     <h2>Mes revenus</h2>
@@ -999,6 +1058,18 @@
           <span id="itemDateLabel">Choisir une date</span>
         </button>
         <input type="hidden" id="itemDate">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Fréquence</label>
+      <div class="recurrence-pick" id="recurrencePick">
+        <button type="button" data-rec="once" class="rec-btn sel">Une seule fois</button>
+        <button type="button" data-rec="weekly" class="rec-btn">Chaque semaine</button>
+        <button type="button" data-rec="biweekly" class="rec-btn">Aux 2 semaines</button>
+        <button type="button" data-rec="monthly" class="rec-btn">Chaque mois</button>
+        <button type="button" data-rec="quarterly" class="rec-btn">Aux 3 mois</button>
+        <button type="button" data-rec="yearly" class="rec-btn">Chaque année</button>
       </div>
     </div>
 
