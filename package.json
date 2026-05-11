@@ -1,0 +1,9 @@
+{
+  "name": "avant-la-paie-api",
+  "version": "1.0.0",
+  "description": "API pour Avant la Paie",
+  "dependencies": {
+    "stripe": "^14.0.0",
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
