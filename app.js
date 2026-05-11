@@ -126,7 +126,7 @@ function checkPaymentReturn() {
     setTimeout(async () => {
       await loadSubscription();
       render();
-      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux annuler à tout moment depuis Mon compte → Gérer mon abonnement.');
+      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.');
     }, 2000);
   } else if (paiement === 'annule') {
     window.history.replaceState({}, document.title, window.location.pathname);
