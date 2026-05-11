@@ -125,7 +125,7 @@ function checkPaymentReturn() {
     setTimeout(async () => {
       await loadSubscription();
       render();
-      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux annuler à tout moment.');
+      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux annuler à tout moment depuis Mon compte → Gérer mon abonnement.');
     }, 2000);
   } else if (paiement === 'annule') {
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -583,6 +583,7 @@ function render() {
     // Statut PRO vs Essai
     const planEl = document.getElementById('userPlan');
     const upgradeBtn = document.getElementById('upgradeBtn');
+    const manageBillingBtn = document.getElementById('manageBillingBtn');
 
     if (currentSubscription) {
       const status = currentSubscription.status;
@@ -595,25 +596,30 @@ function render() {
           planEl.textContent = '⏳ Essai PRO actif';
         }
         upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       } else if (status === 'active') {
         planEl.textContent = '✨ PRO actif';
         planEl.style.color = 'var(--good)';
         upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       } else if (status === 'past_due') {
         planEl.textContent = '⚠️ Paiement en attente';
         planEl.style.color = 'var(--warn)';
         upgradeBtn.style.display = 'block';
+        manageBillingBtn.style.display = 'block';
       } else {
         // canceled, etc
         const daysLeft = getTrialDaysLeft();
         planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
         upgradeBtn.style.display = 'block';
+        manageBillingBtn.style.display = 'none';
       }
     } else {
       // Pas d'abonnement = en essai gratuit (calculé depuis la date d'inscription)
       const daysLeft = getTrialDaysLeft();
       planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
       upgradeBtn.style.display = 'block';
+      manageBillingBtn.style.display = 'none';
     }
   }
 
@@ -1013,6 +1019,11 @@ document.getElementById('upgradeBtn').onclick = () => {
   showScreen('proScreen');
 };
 
+document.getElementById('manageBillingBtn').onclick = () => {
+  document.getElementById('userDropdown').classList.remove('show');
+  openCustomerPortal();
+};
+
 // Bouton retour sur la page PRO
 document.getElementById('proBackBtn').onclick = () => {
   showScreen('main');
@@ -1062,6 +1073,42 @@ async function startSubscription(plan) {
 
 document.getElementById('subscribeMonthlyBtn').onclick = () => startSubscription('monthly');
 document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription('yearly');
+
+async function openCustomerPortal() {
+  if (!currentUser) {
+    alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  const btn = document.getElementById('manageBillingBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Ouverture du portail...';
+
+  try {
+    const response = await fetch(`${API_URL}/api/create-portal-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Pas d\'URL de gestion reçue');
+    }
+  } catch (e) {
+    alert('Impossible d\'ouvrir la gestion de l\'abonnement : ' + e.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
 
 // App
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
