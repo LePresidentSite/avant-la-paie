@@ -1,15 +1,24 @@
+// ============================================================
+// API /api/create-checkout-session
+// Crée une session Stripe Checkout pour un abonnement
+// ============================================================
+
+// Importer Stripe
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 module.exports = async (req, res) => {
+  // CORS - permettre l'app web à appeler ce serveur
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Pré-vol CORS
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // Seulement POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
   }
@@ -21,6 +30,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Données manquantes' });
     }
 
+    // Choisir le bon Price ID selon le plan
     let priceId;
     if (plan === 'monthly') {
       priceId = process.env.STRIPE_PRICE_MONTHLY;
@@ -30,12 +40,15 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Plan invalide' });
     }
 
+    // URL de retour après paiement
     const origin = req.headers.origin || 'https://lepresidentsite.github.io';
     const successUrl = `${origin}/avant-la-paie/?paiement=success`;
     const cancelUrl = `${origin}/avant-la-paie/?paiement=annule`;
 
+    // Créer la session Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      allow_promotion_codes: true,
       payment_method_types: ['card'],
       line_items: [{
         price: priceId,
