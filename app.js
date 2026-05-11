@@ -474,6 +474,75 @@ function daysUntil(dStr) {
   return Math.round((target - now) / 86400000);
 }
 
+function getDateStatusLabel(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return '';
+  if (d === 0) return "aujourd'hui";
+  if (d === 1) return 'demain';
+  if (d > 1) return `dans ${d}j`;
+  return `en retard ${Math.abs(d)}j`;
+}
+
+function getUpcomingPayments() {
+  return state.envelopes
+    .filter(env => env.date && !env.allocated)
+    .map(env => ({ ...env, days: daysUntil(env.date) }))
+    .sort((a, b) => {
+      if (a.days !== b.days) return a.days - b.days;
+      return String(a.name).localeCompare(String(b.name), 'fr-CA');
+    });
+}
+
+function updateUpcomingButton() {
+  const btn = document.getElementById('upcomingBtn');
+  if (!btn) return;
+  const count = getUpcomingPayments().length;
+  btn.textContent = count > 0 ? `📅 À venir (${count})` : '📅 À venir';
+}
+
+function openUpcomingPopup() {
+  renderUpcomingPopup();
+  document.getElementById('upcomingOverlay').classList.add('show');
+}
+
+function closeUpcomingPopup() {
+  document.getElementById('upcomingOverlay').classList.remove('show');
+}
+
+function renderUpcomingPopup() {
+  const list = document.getElementById('upcomingList');
+  const upcoming = getUpcomingPayments().slice(0, 10);
+  list.innerHTML = '';
+
+  if (upcoming.length === 0) {
+    list.innerHTML = `
+      <div class="upcoming-empty">
+        Aucun paiement à venir avec une date.<br>
+        Ajoute une date à tes enveloppes pour les voir ici.
+      </div>
+    `;
+    return;
+  }
+
+  upcoming.forEach(item => {
+    const rec = item.recurrence && item.recurrence !== 'once'
+      ? ` · ${getRecurrenceLabel(item.recurrence).replace('🔁 ', '')}`
+      : '';
+    const dateText = `${formatDateShort(item.date)} · ${getDateStatusLabel(item.date)}${rec}`;
+    const div = document.createElement('div');
+    div.className = 'upcoming-item' + (item.days < 0 ? ' overdue' : '');
+    div.innerHTML = `
+      <div class="upcoming-emoji">${item.emoji}</div>
+      <div class="upcoming-info">
+        <div class="upcoming-name">${escapeHtml(item.name)}</div>
+        <div class="upcoming-meta">${escapeHtml(dateText)}</div>
+      </div>
+      <div class="upcoming-amount">${fmt(item.amount)}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
 // Étiquettes des récurrences
 function getRecurrenceLabel(rec) {
   switch (rec) {
@@ -566,6 +635,7 @@ function render() {
   const today = new Date();
   document.getElementById('todayDate').textContent =
     today.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+  updateUpcomingButton();
 
   // Barre "Nouveau cycle" si éléments récurrents
   const recCount = countRecurrent();
@@ -1132,6 +1202,7 @@ async function openCustomerPortal() {
 }
 
 // App
+document.getElementById('upcomingBtn').onclick = openUpcomingPopup;
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
 document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
 
@@ -1254,6 +1325,11 @@ document.body.addEventListener('click', async e => {
 
 document.getElementById('modal').addEventListener('click', e => {
   if (e.target.id === 'modal') closeModal();
+});
+
+document.getElementById('upcomingClose').addEventListener('click', closeUpcomingPopup);
+document.getElementById('upcomingOverlay').addEventListener('click', e => {
+  if (e.target.id === 'upcomingOverlay') closeUpcomingPopup();
 });
 
 document.getElementById('resetBtn').onclick = async () => {
