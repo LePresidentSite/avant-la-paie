@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v7';
+const CACHE = 'avantlapaie-v8';
 const ASSETS = [
   './',
   './index.html',

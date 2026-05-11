@@ -42,6 +42,7 @@ const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','
 // État global
 let currentUser = null;
 let currentSubscription = null;
+const STRIPE_PORTAL_LOGIN_URL = 'https://billing.stripe.com/p/login/14A5kE7C9fmoduWb5veQM00';
 let state = {
   revenus: [],
   envelopes: []
@@ -612,14 +613,14 @@ function render() {
         const daysLeft = getTrialDaysLeft();
         planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
         upgradeBtn.style.display = 'block';
-        manageBillingBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       }
     } else {
       // Pas d'abonnement = en essai gratuit (calculé depuis la date d'inscription)
       const daysLeft = getTrialDaysLeft();
       planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
       upgradeBtn.style.display = 'block';
-      manageBillingBtn.style.display = 'none';
+      manageBillingBtn.style.display = 'block';
     }
   }
 
@@ -1077,6 +1078,11 @@ document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription(
 async function openCustomerPortal() {
   if (!currentUser) {
     alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  if (!currentSubscription || !currentSubscription.stripe_customer_id) {
+    window.location.href = STRIPE_PORTAL_LOGIN_URL;
     return;
   }
 
