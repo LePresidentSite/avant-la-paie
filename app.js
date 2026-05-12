@@ -51,6 +51,9 @@ let state = {
 let editing = { type: null, id: null };
 let selectedEmoji = '💼';
 let selectedRecurrence = 'once';
+let upcomingMonth = new Date();
+upcomingMonth.setDate(1);
+let selectedUpcomingDate = null;
 
 // ============================================================
 // GESTION DES ÉCRANS
@@ -493,26 +496,84 @@ function getUpcomingPayments() {
     });
 }
 
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateLong(dStr) {
+  if (!dStr) return '';
+  const d = new Date(dStr + 'T00:00:00');
+  return d.toLocaleDateString('fr-CA', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+}
+
+function sameMonth(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function selectFirstUpcomingDateInVisibleMonth() {
+  const match = getUpcomingPayments().find(item => {
+    const itemDate = new Date(item.date + 'T00:00:00');
+    return sameMonth(itemDate, upcomingMonth);
+  });
+  selectedUpcomingDate = match
+    ? match.date
+    : isoDate(new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), 1));
+}
+
 function updateUpcomingButton() {
   const btn = document.getElementById('upcomingBtn');
+  const sub = document.getElementById('upcomingCardSub');
   if (!btn) return;
-  const count = getUpcomingPayments().length;
-  btn.textContent = count > 0 ? `📅 À venir (${count})` : '📅 À venir';
+  const upcoming = getUpcomingPayments();
+
+  if (sub) {
+    if (upcoming.length === 0) {
+      sub.textContent = 'Ajoute une date à tes enveloppes';
+    } else {
+      const next = upcoming[0];
+      sub.textContent = `${upcoming.length} paiement${upcoming.length > 1 ? 's' : ''} · Prochain : ${next.name} ${getDateStatusLabel(next.date)}`;
+    }
+  }
 }
 
 function openUpcomingPopup() {
+  const upcoming = getUpcomingPayments();
+  if (upcoming.length > 0) {
+    const firstDate = selectedUpcomingDate || upcoming[0].date;
+    selectedUpcomingDate = firstDate;
+    upcomingMonth = new Date(firstDate + 'T00:00:00');
+    upcomingMonth.setDate(1);
+  } else {
+    selectedUpcomingDate = isoDate(new Date());
+    upcomingMonth = new Date();
+    upcomingMonth.setDate(1);
+  }
   renderUpcomingPopup();
-  document.getElementById('upcomingOverlay').classList.add('show');
+  const overlay = document.getElementById('upcomingOverlay');
+  if (overlay) overlay.classList.add('show');
 }
 
 function closeUpcomingPopup() {
-  document.getElementById('upcomingOverlay').classList.remove('show');
+  const overlay = document.getElementById('upcomingOverlay');
+  if (overlay) overlay.classList.remove('show');
 }
 
 function renderUpcomingPopup() {
   const list = document.getElementById('upcomingList');
-  const upcoming = getUpcomingPayments().slice(0, 10);
-  list.innerHTML = '';
+  if (!list) return;
+
+  const upcoming = getUpcomingPayments();
+  const todayIso = isoDate(new Date());
+  const paymentDates = new Set(upcoming.map(item => item.date));
+  const selectedItems = upcoming.filter(item => item.date === selectedUpcomingDate);
+  const monthTitle = upcomingMonth.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
 
   if (upcoming.length === 0) {
     list.innerHTML = `
@@ -524,23 +585,69 @@ function renderUpcomingPopup() {
     return;
   }
 
-  upcoming.forEach(item => {
+  const firstDay = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), 1);
+  const lastDay = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth() + 1, 0);
+  const startOffset = firstDay.getDay(); // dimanche = 0
+  const weekdays = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+  let grid = weekdays.map(day => `<div class="upcoming-cal-weekday">${day}</div>`).join('');
+
+  for (let i = 0; i < startOffset; i++) {
+    grid += `<button type="button" class="upcoming-cal-day empty" tabindex="-1"></button>`;
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const d = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), day);
+    const dateStr = isoDate(d);
+    const classes = [
+      'upcoming-cal-day',
+      paymentDates.has(dateStr) ? 'has-payment' : '',
+      dateStr === todayIso ? 'today' : '',
+      dateStr === selectedUpcomingDate ? 'selected' : ''
+    ].filter(Boolean).join(' ');
+    grid += `<button type="button" class="${classes}" data-upcoming-date="${dateStr}">${day}</button>`;
+  }
+
+  const dayTitle = selectedUpcomingDate
+    ? formatDateLong(selectedUpcomingDate)
+    : 'Sélectionne une date';
+  const dayCount = selectedItems.length;
+  const dayList = dayCount > 0
+    ? selectedItems.map(item => renderUpcomingItem(item)).join('')
+    : `<div class="upcoming-empty">Aucun paiement prévu cette journée.</div>`;
+
+  list.innerHTML = `
+    <div class="upcoming-calendar">
+      <div class="upcoming-cal-nav">
+        <button type="button" class="upcoming-cal-btn" data-action="upcoming-prev" aria-label="Mois précédent">‹</button>
+        <div class="upcoming-cal-title">${escapeHtml(monthTitle)}</div>
+        <button type="button" class="upcoming-cal-btn" data-action="upcoming-next" aria-label="Mois suivant">›</button>
+      </div>
+      <div class="upcoming-cal-grid">${grid}</div>
+    </div>
+    <div class="upcoming-day-title">
+      <h4>${escapeHtml(dayTitle)}</h4>
+      <span>${dayCount} paiement${dayCount > 1 ? 's' : ''}</span>
+    </div>
+    ${dayList}
+  `;
+}
+
+function renderUpcomingItem(item) {
     const rec = item.recurrence && item.recurrence !== 'once'
       ? ` · ${getRecurrenceLabel(item.recurrence).replace('🔁 ', '')}`
       : '';
     const dateText = `${formatDateShort(item.date)} · ${getDateStatusLabel(item.date)}${rec}`;
-    const div = document.createElement('div');
-    div.className = 'upcoming-item' + (item.days < 0 ? ' overdue' : '');
-    div.innerHTML = `
+    return `
+      <div class="upcoming-item${item.days < 0 ? ' overdue' : ''}">
       <div class="upcoming-emoji">${item.emoji}</div>
       <div class="upcoming-info">
         <div class="upcoming-name">${escapeHtml(item.name)}</div>
         <div class="upcoming-meta">${escapeHtml(dateText)}</div>
       </div>
       <div class="upcoming-amount">${fmt(item.amount)}</div>
+      </div>
     `;
-    list.appendChild(div);
-  });
 }
 
 // Étiquettes des récurrences
@@ -1202,7 +1309,6 @@ async function openCustomerPortal() {
 }
 
 // App
-document.getElementById('upcomingBtn').onclick = openUpcomingPopup;
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
 document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
 
@@ -1300,7 +1406,28 @@ document.getElementById('deleteBtn').onclick = async () => {
 document.body.addEventListener('click', async e => {
   const t = e.target.closest('button');
   if (!t) return;
-  if (t.dataset.revToggle) {
+  if (t.dataset.action === 'open-upcoming' || t.id === 'upcomingBtn') {
+    openUpcomingPopup();
+    return;
+  } else if (t.dataset.action === 'upcoming-prev') {
+    upcomingMonth.setMonth(upcomingMonth.getMonth() - 1);
+    if (!selectedUpcomingDate || !sameMonth(new Date(selectedUpcomingDate + 'T00:00:00'), upcomingMonth)) {
+      selectFirstUpcomingDateInVisibleMonth();
+    }
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.action === 'upcoming-next') {
+    upcomingMonth.setMonth(upcomingMonth.getMonth() + 1);
+    if (!selectedUpcomingDate || !sameMonth(new Date(selectedUpcomingDate + 'T00:00:00'), upcomingMonth)) {
+      selectFirstUpcomingDateInVisibleMonth();
+    }
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.upcomingDate) {
+    selectedUpcomingDate = t.dataset.upcomingDate;
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.revToggle) {
     const r = state.revenus.find(x => x.id === t.dataset.revToggle);
     if (r) {
       r.received = !r.received;
