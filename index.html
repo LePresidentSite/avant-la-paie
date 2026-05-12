@@ -194,6 +194,20 @@
     line-height: 1.7;
   }
   .auth-features div { margin-bottom: 4px; }
+  .legal-links {
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 18px;
+  }
+  .legal-links a {
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 
   .auth-trial-badge {
     display: inline-block;
@@ -314,6 +328,18 @@
     font-size: 14px;
     cursor: pointer;
   }
+  .user-dropdown a {
+    display: block;
+    width: 100%;
+    text-align: left;
+    color: var(--ink);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .user-dropdown a:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button.danger { color: var(--warn); }
 
@@ -1129,6 +1155,9 @@
       <div>✓ Sauvegarde sécurisée</div>
       <div>✓ 30 jours d'essai, sans engagement</div>
     </div>
+    <div class="legal-links">
+      <a href="confidentialite.html">Politique de confidentialité</a>
+    </div>
   </div>
 </div>
 
@@ -1161,6 +1190,10 @@
       <div class="auth-switch">
         Déjà un compte? <a id="switchToLogin">Se connecter</a>
       </div>
+      <div class="legal-links">
+        En créant un compte, tu confirmes avoir lu la
+        <a href="confidentialite.html">politique de confidentialité</a>.
+      </div>
     </div>
   </div>
 </div>
@@ -1191,6 +1224,9 @@
       </div>
       <div class="auth-switch" style="margin-top:8px;">
         <a id="forgotPassword" style="font-size:12px;">Mot de passe oublié?</a>
+      </div>
+      <div class="legal-links">
+        <a href="confidentialite.html">Politique de confidentialité</a>
       </div>
     </div>
   </div>
@@ -1254,6 +1290,7 @@
             </div>
             <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
             <button id="manageBillingBtn">Facturation et abonnement</button>
+            <a href="confidentialite.html">Politique de confidentialité</a>
             <button class="danger" id="logoutBtn">Déconnexion</button>
           </div>
         </div>
@@ -1315,6 +1352,7 @@
   <button class="add-inline orange" id="addEnvBtn">+ Ajouter une enveloppe de dépense</button>
 
   <a class="reset-link" id="resetBtn">Tout réinitialiser</a>
+  <a class="reset-link" href="confidentialite.html">Politique de confidentialité</a>
 </div>
 
 <!-- Modal -->
@@ -1407,11 +1445,11 @@
 
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="app.js?v=15"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=14').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=15').catch(() => {});
   }
 </script>
 </body>
