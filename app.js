@@ -43,6 +43,10 @@ const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','
 let currentUser = null;
 let currentSubscription = null;
 const STRIPE_PORTAL_LOGIN_URL = 'https://billing.stripe.com/p/login/14A5kE7C9fmoduWb5veQM00';
+const FREE_LIMITS = {
+  revenus: 1,
+  envelopes: 5
+};
 let state = {
   revenus: [],
   envelopes: []
@@ -140,7 +144,53 @@ function checkPaymentReturn() {
 function isProUser() {
   if (!currentSubscription) return false;
   const status = currentSubscription.status;
-  return status === 'active' || status === 'trialing';
+  if (status === 'active') return true;
+  if (status !== 'trialing') return false;
+
+  if (!currentSubscription.current_period_end) return true;
+  return new Date(currentSubscription.current_period_end) > new Date();
+}
+
+function getStripeTrialDaysLeft() {
+  if (!currentSubscription || currentSubscription.status !== 'trialing' || !currentSubscription.current_period_end) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((new Date(currentSubscription.current_period_end) - new Date()) / 86400000));
+}
+
+function showProPrompt(title, message) {
+  alert(`${title}\n\n${message}\n\nPRO débloque les revenus illimités, les enveloppes illimitées, les récurrences et le calendrier complet.`);
+  const modal = document.getElementById('modal');
+  if (modal) modal.classList.remove('show');
+  const dropdown = document.getElementById('userDropdown');
+  if (dropdown) dropdown.classList.remove('show');
+  showScreen('proScreen');
+}
+
+function canCreateRevenu() {
+  if (isProUser()) return true;
+  if (state.revenus.length < FREE_LIMITS.revenus) return true;
+  showProPrompt(
+    'Limite gratuite atteinte',
+    `Le plan gratuit permet ${FREE_LIMITS.revenus} source de revenu. Passe à PRO pour ajouter plusieurs revenus.`
+  );
+  return false;
+}
+
+function canCreateEnvelope() {
+  if (isProUser()) return true;
+  if (state.envelopes.length < FREE_LIMITS.envelopes) return true;
+  showProPrompt(
+    'Limite gratuite atteinte',
+    `Le plan gratuit permet ${FREE_LIMITS.envelopes} enveloppes de dépenses. Passe à PRO pour en ajouter autant que nécessaire.`
+  );
+  return false;
+}
+
+function canUseProFeature(featureName) {
+  if (isProUser()) return true;
+  showProPrompt('Fonction PRO', `${featureName} fait partie de la version PRO.`);
+  return false;
 }
 
 // Inscription
@@ -671,6 +721,8 @@ function countRecurrent() {
 
 // Renouveler un cycle: décocher reçus/déposés ET avancer les dates
 async function renewCycle() {
+  if (!canUseProFeature('Le nouveau cycle automatique')) return;
+
   if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus et dépenses récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
 
   const btn = document.getElementById('newCycleBtn');
@@ -771,14 +823,12 @@ function render() {
 
     if (currentSubscription) {
       const status = currentSubscription.status;
-      if (status === 'trialing') {
-        const periodEnd = currentSubscription.current_period_end;
-        if (periodEnd) {
-          const daysLeft = Math.ceil((new Date(periodEnd) - new Date()) / 86400000);
-          planEl.textContent = daysLeft > 0 ? `⏳ Essai PRO · ${daysLeft}j restants` : '✨ PRO actif';
-        } else {
-          planEl.textContent = '⏳ Essai PRO actif';
-        }
+      const stripeTrialDaysLeft = getStripeTrialDaysLeft();
+      if (status === 'trialing' && isProUser()) {
+        planEl.textContent = stripeTrialDaysLeft !== null
+          ? `⏳ Essai PRO · ${stripeTrialDaysLeft}j restants`
+          : '⏳ Essai PRO actif';
+        planEl.style.color = 'var(--accent)';
         upgradeBtn.style.display = 'none';
         manageBillingBtn.style.display = 'block';
       } else if (status === 'active') {
@@ -793,15 +843,15 @@ function render() {
         manageBillingBtn.style.display = 'block';
       } else {
         // canceled, etc
-        const daysLeft = getTrialDaysLeft();
-        planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+        planEl.textContent = 'Plan gratuit';
+        planEl.style.color = 'var(--ink-soft)';
         upgradeBtn.style.display = 'block';
         manageBillingBtn.style.display = 'block';
       }
     } else {
-      // Pas d'abonnement = en essai gratuit (calculé depuis la date d'inscription)
-      const daysLeft = getTrialDaysLeft();
-      planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+      // Pas d'abonnement = plan gratuit permanent avec limites douces.
+      planEl.textContent = 'Plan gratuit';
+      planEl.style.color = 'var(--ink-soft)';
       upgradeBtn.style.display = 'block';
       manageBillingBtn.style.display = 'block';
     }
@@ -946,6 +996,11 @@ function render() {
 // MODAL D'ÉDITION
 // ============================================================
 function openModal(type, item = null) {
+  if (!item) {
+    if (type === 'revenu' && !canCreateRevenu()) return;
+    if (type === 'envelope' && !canCreateEnvelope()) return;
+  }
+
   editing = { type, id: item ? item.id : null };
 
   const isRev = type === 'revenu';
@@ -1037,6 +1092,10 @@ function renderRecurrencePick(isRev) {
     btn.classList.toggle('green', isRev);
     btn.onclick = (e) => {
       e.preventDefault();
+      if (rec !== 'once' && !isProUser()) {
+        canUseProFeature('Les revenus et dépenses récurrents');
+        return;
+      }
       selectedRecurrence = rec;
       renderRecurrencePick(isRev);
     };
@@ -1321,6 +1380,9 @@ document.getElementById('saveBtn').onclick = async () => {
   const amount = parseFloat(document.getElementById('itemAmount').value) || 0;
   const date = document.getElementById('itemDate').value;
   if (!name) { alert('Donne un nom'); return; }
+  if (selectedRecurrence !== 'once' && !canUseProFeature('Les revenus et dépenses récurrents')) return;
+  if (!editing.id && editing.type === 'revenu' && !canCreateRevenu()) return;
+  if (!editing.id && editing.type === 'envelope' && !canCreateEnvelope()) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
