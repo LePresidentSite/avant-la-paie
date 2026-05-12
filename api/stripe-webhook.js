@@ -30,6 +30,24 @@ async function getRawBody(req) {
   return Buffer.concat(chunks);
 }
 
+function stripeTimestampToIso(value) {
+  if (!value || typeof value !== 'number') return null;
+  const date = new Date(value * 1000);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function getSubscriptionEnd(subscription) {
+  return stripeTimestampToIso(subscription.current_period_end)
+    || stripeTimestampToIso(subscription.trial_end)
+    || stripeTimestampToIso(subscription.items?.data?.[0]?.current_period_end)
+    || stripeTimestampToIso(subscription.items?.data?.[0]?.current_period?.end);
+}
+
+function getSubscriptionUserId(subscription) {
+  return subscription.metadata?.user_id
+    || subscription.items?.data?.[0]?.metadata?.user_id;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -63,9 +81,7 @@ module.exports = async (req, res) => {
             status: subscription.status,
             stripe_customer_id: subscription.customer || session.customer,
             stripe_subscription_id: subscriptionId,
-            current_period_end: subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000).toISOString()
-              : null
+            current_period_end: getSubscriptionEnd(subscription)
           });
         }
         break;
@@ -75,7 +91,7 @@ module.exports = async (req, res) => {
       case 'customer.subscription.updated':
       case 'customer.subscription.created': {
         const subscription = event.data.object;
-        const userId = subscription.metadata?.user_id;
+        const userId = getSubscriptionUserId(subscription);
 
         if (userId) {
           let status = subscription.status; // 'active', 'trialing', 'past_due', 'canceled'
@@ -84,7 +100,7 @@ module.exports = async (req, res) => {
             status: status,
             stripe_customer_id: subscription.customer,
             stripe_subscription_id: subscription.id,
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+            current_period_end: getSubscriptionEnd(subscription)
           });
         }
         break;
