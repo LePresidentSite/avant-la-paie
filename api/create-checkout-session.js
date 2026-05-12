@@ -7,6 +7,35 @@
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const { createClient } = require('@supabase/supabase-js');
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+async function findExistingCustomerId(userId, userEmail) {
+  try {
+    const { data } = await supabaseAdmin
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (data?.stripe_customer_id) {
+      return data.stripe_customer_id;
+    }
+  } catch (error) {
+    console.warn('Recherche client Supabase impossible:', error.message);
+  }
+
+  const customers = await stripe.customers.list({
+    email: userEmail,
+    limit: 1
+  });
+
+  return customers.data[0]?.id || null;
+}
+
 module.exports = async (req, res) => {
   // CORS - permettre l'app web à appeler ce serveur
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,9 +73,10 @@ module.exports = async (req, res) => {
     const origin = req.headers.origin || 'https://lepresidentsite.github.io';
     const successUrl = `${origin}/avant-la-paie/?paiement=success`;
     const cancelUrl = `${origin}/avant-la-paie/?paiement=annule`;
+    const existingCustomerId = await findExistingCustomerId(userId, userEmail);
 
     // Créer la session Stripe Checkout
-    const session = await stripe.checkout.sessions.create({
+    const checkoutParams = {
       mode: 'subscription',
       allow_promotion_codes: true,
       payment_method_types: ['card'],
@@ -54,7 +84,6 @@ module.exports = async (req, res) => {
         price: priceId,
         quantity: 1
       }],
-      customer_email: userEmail,
       client_reference_id: userId,
       metadata: {
         user_id: userId,
@@ -69,7 +98,15 @@ module.exports = async (req, res) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       locale: 'fr-CA'
-    });
+    };
+
+    if (existingCustomerId) {
+      checkoutParams.customer = existingCustomerId;
+    } else {
+      checkoutParams.customer_email = userEmail;
+    }
+
+    const session = await stripe.checkout.sessions.create(checkoutParams);
 
     return res.status(200).json({ url: session.url, sessionId: session.id });
 
