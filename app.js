@@ -39,6 +39,20 @@ const PRESETS_REV = [
 const EMOJIS_ENV = ['🏠','🛒','⚡','💧','📱','🌐','🚗','⛽','💊','🏥','🎉','☕','💰','🎁','👶','🐾','📚','👕','🎮','✈️','🍕','🧾'];
 const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','🎁','📈','🏖️','👶','📱','🏠','🎨','✨','💎','🪙'];
 
+const PRESETS_SAVE = [
+  { emoji: '🛟', name: 'Sécurité' },
+  { emoji: '✈️', name: 'Voyage' },
+  { emoji: '🛋️', name: 'Sofa' },
+  { emoji: '🎄', name: 'Noël' },
+  { emoji: '🚗', name: 'Auto' },
+  { emoji: '🏠', name: 'Maison' },
+  { emoji: '🦷', name: 'Dentiste' },
+  { emoji: '🎓', name: 'Études' },
+  { emoji: '✨', name: 'Projet perso' }
+];
+
+const EMOJIS_SAVE = ['🛟','💛','✨','✈️','🛋️','🎄','🚗','🏠','🦷','🎓','💰','🌱','🎁','💎','☂️','🔒','🧘','🧡'];
+
 // État global
 let currentUser = null;
 let currentSubscription = null;
@@ -49,7 +63,8 @@ const FREE_LIMITS = {
 };
 let state = {
   revenus: [],
-  envelopes: []
+  envelopes: [],
+  savings: []
 };
 
 let editing = { type: null, id: null };
@@ -71,6 +86,37 @@ function showScreen(screenId) {
 
   if (screenId === 'main') {
     document.getElementById('mainApp').classList.add('show');
+  } else if (editing.type === 'saving') {
+    if (editing.id) {
+      const saving = state.savings.find(x => x.id === editing.id);
+      if (saving) {
+        saving.name = name;
+        saving.amount = amount;
+        saving.target_amount = targetAmount || null;
+        saving.emoji = selectedEmoji;
+        saving.date = date;
+        await saveSaving(saving, false);
+      }
+    } else {
+      const newSaving = {
+        emoji: selectedEmoji,
+        name,
+        amount,
+        target_amount: targetAmount || null,
+        date
+      };
+      const saved = await saveSaving(newSaving, true);
+      if (saved) {
+        state.savings.push({
+          id: saved.id,
+          emoji: saved.emoji || '💛',
+          name: saved.name,
+          amount: parseFloat(saved.amount) || 0,
+          target_amount: saved.target_amount !== null && saved.target_amount !== undefined ? parseFloat(saved.target_amount) : null,
+          date: saved.date || ''
+        });
+      }
+    }
   } else {
     document.getElementById(screenId).style.display = 'flex';
   }
@@ -319,7 +365,7 @@ async function signOut() {
   await supabaseClient.auth.signOut();
   currentUser = null;
   currentSubscription = null;
-  state = { revenus: [], envelopes: [] };
+  state = { revenus: [], envelopes: [], savings: [] };
   showScreen('welcomeScreen');
 }
 
@@ -386,6 +432,26 @@ async function loadUserData() {
         date: e.date || '',
         recurrence: e.recurrence || 'once'
       }));
+    }
+
+    // Charger mises de côté
+    const { data: saves, error: saveErr } = await supabaseClient
+      .from('savings')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+
+    if (!saveErr && saves) {
+      state.savings = saves.map(s => ({
+        id: s.id,
+        emoji: s.emoji || '💛',
+        name: s.name,
+        amount: parseFloat(s.amount) || 0,
+        target_amount: s.target_amount !== null && s.target_amount !== undefined ? parseFloat(s.target_amount) : null,
+        date: s.date || ''
+      }));
+    } else {
+      state.savings = [];
     }
   } catch (e) {
     console.error('Erreur chargement données:', e);
@@ -493,6 +559,59 @@ async function deleteEnvelope(id) {
     await supabaseClient.from('envelopes').delete().eq('id', id).eq('user_id', currentUser.id);
   } catch (e) {
     console.error('Erreur suppression enveloppe:', e);
+  }
+}
+
+// Sauvegarder une mise de côté
+async function saveSaving(saving, isNew) {
+  if (!currentUser) return null;
+  try {
+    const payload = {
+      user_id: currentUser.id,
+      emoji: saving.emoji || '💛',
+      name: saving.name,
+      amount: saving.amount || 0,
+      target_amount: saving.target_amount || null,
+      date: saving.date || null
+    };
+
+    if (isNew) {
+      const { data, error } = await supabaseClient
+        .from('savings')
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { error } = await supabaseClient
+        .from('savings')
+        .update({
+          emoji: payload.emoji,
+          name: payload.name,
+          amount: payload.amount,
+          target_amount: payload.target_amount,
+          date: payload.date,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saving.id)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return saving;
+    }
+  } catch (e) {
+    console.error('Erreur sauvegarde mise de côté:', e);
+    alert('Erreur de sauvegarde : ' + e.message);
+    return null;
+  }
+}
+
+async function deleteSaving(id) {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('savings').delete().eq('id', id).eq('user_id', currentUser.id);
+  } catch (e) {
+    console.error('Erreur suppression mise de côté:', e);
   }
 }
 
@@ -923,7 +1042,9 @@ function render() {
 
   // Reste à allouer
   const totalAlloc = state.envelopes.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
-  const remain = totalRevenus - totalAlloc;
+  const totalSavings = state.savings.reduce((s,item) => s + (parseFloat(item.amount)||0), 0);
+  const totalReserved = totalAlloc + totalSavings;
+  const remain = totalRevenus - totalReserved;
 
   const amountEl = document.getElementById('remainingAmount');
   const subEl = document.getElementById('remainingSub');
@@ -934,7 +1055,7 @@ function render() {
     subEl.textContent = 'Commence par ajouter tes revenus ci-dessus';
   } else if (remain < 0) {
     amountEl.classList.add('over');
-    subEl.textContent = `Tu dépasses tes revenus de ${fmt(-remain)} — réduis une enveloppe`;
+    subEl.textContent = `Tu dépasses tes revenus de ${fmt(-remain)} — réduis une enveloppe ou une mise de côté`;
   } else if (remain === 0) {
     amountEl.classList.add('good');
     subEl.textContent = 'Chaque dollar a une mission. Bravo. 🎯';
@@ -946,8 +1067,52 @@ function render() {
     subEl.textContent = 'Continue à répartir avant que la paie arrive';
   }
 
-  const pct = totalRevenus > 0 ? Math.min(100, (totalAlloc / totalRevenus) * 100) : 0;
+  const pct = totalRevenus > 0 ? Math.min(100, (totalReserved / totalRevenus) * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
+
+  // Mises de côté
+  const savingsBox = document.getElementById('savingsList');
+  savingsBox.innerHTML = '';
+  document.getElementById('savingsCount').textContent = `${fmt(totalSavings)} mis de côté`;
+
+  if (state.savings.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:18px;text-align:center;color:var(--ink-soft);font-style:italic;font-size:13px;';
+    empty.textContent = 'Aucune mise de côté encore.';
+    savingsBox.appendChild(empty);
+  } else {
+    state.savings.forEach(item => {
+      const target = parseFloat(item.target_amount) || 0;
+      const savedAmount = parseFloat(item.amount) || 0;
+      const pctSaved = target > 0 ? Math.min(100, (savedAmount / target) * 100) : 0;
+      let when = '';
+      if (item.date) {
+        const d = daysUntil(item.date);
+        if (d === 0) when = `<span class="when">aujourd'hui</span>`;
+        else if (d === 1) when = `<span class="when">demain</span>`;
+        else if (d > 1) when = `<span class="when">dans ${d}j</span>`;
+        else when = `<span class="when">${formatDateShort(item.date)}</span>`;
+      }
+      const progress = target > 0
+        ? `<div class="saving-progress"><div style="width:${pctSaved}%"></div></div>`
+        : '';
+      const goalText = target > 0 ? `<span> / ${fmt(target)}</span>` : '';
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="item-emoji">${item.emoji || '💛'}</div>
+        <div class="item-info">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <div class="item-amount"><strong class="saving">${fmt(savedAmount)}</strong>${goalText}${when}</div>
+          ${progress}
+        </div>
+        <div class="item-actions">
+          <button class="icon-btn" data-save-edit="${item.id}">✎</button>
+        </div>
+      `;
+      savingsBox.appendChild(div);
+    });
+  }
 
   // Enveloppes
   const envBox = document.getElementById('envelopesList');
@@ -1004,15 +1169,22 @@ function openModal(type, item = null) {
   editing = { type, id: item ? item.id : null };
 
   const isRev = type === 'revenu';
-  const emojis = isRev ? EMOJIS_REV : EMOJIS_ENV;
-  const presets = isRev ? PRESETS_REV : PRESETS_ENV;
+  const isSaving = type === 'saving';
+  const emojis = isRev ? EMOJIS_REV : (isSaving ? EMOJIS_SAVE : EMOJIS_ENV);
+  const presets = isRev ? PRESETS_REV : (isSaving ? PRESETS_SAVE : PRESETS_ENV);
 
   selectedEmoji = item ? item.emoji : (isRev ? '💼' : '🏠');
+
+  if (!item && isSaving) selectedEmoji = '💛';
 
   const title = item ? (isRev ? 'Modifier le revenu' : 'Modifier l\'enveloppe')
                      : (isRev ? 'Nouveau revenu' : 'Nouvelle enveloppe');
   const badge = isRev ? '<span class="badge green">Revenu</span>' : '<span class="badge">Dépense</span>';
   document.getElementById('modalTitle').innerHTML = title + ' ' + badge;
+  if (isSaving) {
+    const savingTitle = item ? 'Modifier la mise de côté' : 'Nouvelle mise de côté';
+    document.getElementById('modalTitle').innerHTML = savingTitle + ' <span class="badge">Mise de côté</span>';
+  }
 
   document.getElementById('nameLabel').textContent = isRev ? 'Source du revenu' : 'Nom de l\'enveloppe';
   document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant à mettre de côté';
@@ -1020,16 +1192,26 @@ function openModal(type, item = null) {
   document.getElementById('dateLabel').textContent = isRev ? 'Date prévue' : 'Date de la dépense';
   document.getElementById('presetsLabel').textContent = isRev ? 'Sources rapides' : 'Suggestions rapides';
   document.getElementById('itemName').placeholder = isRev ? 'ex. Paie principale' : 'ex. Épicerie';
+  if (isSaving) {
+    document.getElementById('nameLabel').textContent = 'Nom de la mise de côté';
+    document.getElementById('amountLabel').textContent = 'Montant mis de côté';
+    document.getElementById('dateLabel').textContent = 'Date cible';
+    document.getElementById('presetsLabel').textContent = 'Idées rapides';
+    document.getElementById('itemName').placeholder = 'ex. Sécurité, Voyage, Sofa';
+  }
 
   const primary = document.getElementById('saveBtn');
   primary.classList.toggle('green', isRev);
 
   document.getElementById('itemName').value = item ? item.name : '';
   document.getElementById('itemAmount').value = item ? item.amount : '';
+  document.getElementById('targetField').style.display = isSaving ? 'block' : 'none';
+  document.getElementById('itemTarget').value = item && item.target_amount ? item.target_amount : '';
   document.getElementById('itemDate').value = item && item.date ? item.date : '';
   document.getElementById('deleteBtn').style.display = item ? 'block' : 'none';
 
   selectedRecurrence = item ? (item.recurrence || 'once') : 'once';
+  document.getElementById('recurrenceField').style.display = isSaving ? 'none' : 'block';
   renderRecurrencePick(isRev);
 
   renderEmojiPick(emojis, isRev);
@@ -1370,6 +1552,7 @@ async function openCustomerPortal() {
 // App
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
 document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
+document.getElementById('addSavingBtn').onclick = () => openModal('saving');
 
 // Bouton "Nouveau cycle"
 document.getElementById('newCycleBtn').onclick = renewCycle;
@@ -1378,9 +1561,10 @@ document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = async () => {
   const name = document.getElementById('itemName').value.trim();
   const amount = parseFloat(document.getElementById('itemAmount').value) || 0;
+  const targetAmount = parseFloat(document.getElementById('itemTarget').value) || 0;
   const date = document.getElementById('itemDate').value;
   if (!name) { alert('Donne un nom'); return; }
-  if (selectedRecurrence !== 'once' && !canUseProFeature('Les revenus et dépenses récurrents')) return;
+  if (editing.type !== 'saving' && selectedRecurrence !== 'once' && !canUseProFeature('Les revenus et dépenses récurrents')) return;
   if (!editing.id && editing.type === 'revenu' && !canCreateRevenu()) return;
   if (!editing.id && editing.type === 'envelope' && !canCreateEnvelope()) return;
 

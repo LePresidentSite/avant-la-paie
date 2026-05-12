@@ -515,6 +515,22 @@
     margin-left: 6px;
   }
   .item-amount strong.green { color: var(--good); font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .item-amount strong.saving { color: #a78bfa; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .saving-progress {
+    height: 5px;
+    width: 100%;
+    max-width: 220px;
+    background: rgba(167,139,250,0.12);
+    border-radius: 999px;
+    margin-top: 7px;
+    overflow: hidden;
+  }
+  .saving-progress div {
+    height: 100%;
+    background: linear-gradient(90deg, #a78bfa, var(--accent));
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
 
   .rec-badge {
     display: inline-block;
@@ -624,6 +640,8 @@
   .add-inline.green:active { background: rgba(44,182,125,0.1); color: var(--good); }
   .add-inline.orange { border-color: rgba(255,137,6,0.3); }
   .add-inline.orange:active { background: rgba(255,137,6,0.1); color: var(--accent); }
+  .add-inline.purple { border-color: rgba(167,139,250,0.35); }
+  .add-inline.purple:active { background: rgba(167,139,250,0.1); color: #c4b5fd; }
 
   /* MODAL */
   .modal-bg {
@@ -1351,6 +1369,16 @@
     <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
   </div>
 
+  <!-- MISES DE CÔTÉ -->
+  <div class="section-title">
+    <h2>Mes mises de côté</h2>
+    <span id="savingsCount">0 $ mis de côté</span>
+  </div>
+
+  <div id="savingsList"></div>
+
+  <button class="add-inline purple" id="addSavingBtn">+ Ajouter une mise de côté</button>
+
   <!-- ENVELOPPES -->
   <div class="section-title">
     <h2>Mes enveloppes</h2>
@@ -1394,7 +1422,12 @@
       </div>
     </div>
 
-    <div class="field">
+    <div class="field" id="targetField" style="display:none;">
+      <label id="targetLabel">Objectif total</label>
+      <input type="number" id="itemTarget" placeholder="Optionnel" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="field" id="recurrenceField">
       <label>Fréquence</label>
       <div class="recurrence-pick" id="recurrencePick">
         <button type="button" data-rec="once" class="rec-btn sel">Une seule fois</button>
