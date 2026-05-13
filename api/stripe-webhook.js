@@ -48,6 +48,79 @@ function getSubscriptionUserId(subscription) {
     || subscription.items?.data?.[0]?.metadata?.user_id;
 }
 
+function formatMoneyFromCents(amount, currency) {
+  const dollars = (amount || 0) / 100;
+  return new Intl.NumberFormat('fr-CA', {
+    style: 'currency',
+    currency: (currency || 'cad').toUpperCase()
+  }).format(dollars);
+}
+
+function getSubscriptionPlanLabel(subscription) {
+  const item = subscription.items?.data?.[0];
+  const price = item?.price;
+  const interval = price?.recurring?.interval;
+  const amount = price?.unit_amount;
+  const currency = price?.currency || 'cad';
+
+  if (interval === 'year') return `Annuel - ${formatMoneyFromCents(amount, currency)}`;
+  if (interval === 'month') return `Mensuel - ${formatMoneyFromCents(amount, currency)}`;
+
+  return price?.nickname || price?.id || 'Plan inconnu';
+}
+
+async function getCustomerEmail(customerId, fallbackEmail) {
+  if (fallbackEmail) return fallbackEmail;
+  if (!customerId || typeof customerId !== 'string') return 'courriel inconnu';
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return customer.email || 'courriel inconnu';
+  } catch (error) {
+    console.error('Impossible de recuperer le client Stripe:', error.message);
+    return 'courriel inconnu';
+  }
+}
+
+async function sendOwnerSms(message) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM_NUMBER;
+  const to = process.env.OWNER_PHONE_NUMBER;
+
+  if (!sid || !token || !from || !to) {
+    console.log('SMS non envoye: variables Twilio manquantes.');
+    return;
+  }
+
+  try {
+    const body = new URLSearchParams({
+      From: from,
+      To: to,
+      Body: message
+    });
+
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Erreur SMS Twilio:', response.status, text);
+      return;
+    }
+
+    console.log('SMS proprietaire envoye.');
+  } catch (error) {
+    console.error('Erreur envoi SMS Twilio:', error.message);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -83,11 +156,37 @@ module.exports = async (req, res) => {
             stripe_subscription_id: subscriptionId,
             current_period_end: getSubscriptionEnd(subscription)
           });
+
+          const email = await getCustomerEmail(
+            subscription.customer || session.customer,
+            session.customer_details?.email || session.customer_email
+          );
+          const plan = getSubscriptionPlanLabel(subscription);
+          const statusLabel = subscription.status === 'trialing'
+            ? 'Essai PRO commence'
+            : 'Nouvel abonnement PRO';
+
+          await sendOwnerSms(`Avant la Paie\n${statusLabel}\nClient: ${email}\nPlan: ${plan}`);
         }
         break;
       }
 
       // Quand l'abonnement est mis à jour (renouvellement, changement de plan)
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+
+        if ((invoice.amount_paid || 0) <= 0) {
+          console.log('Facture a 0 $, SMS paiement ignore.');
+          break;
+        }
+
+        const email = await getCustomerEmail(invoice.customer, invoice.customer_email);
+        const amount = formatMoneyFromCents(invoice.amount_paid, invoice.currency);
+
+        await sendOwnerSms(`Avant la Paie\nPaiement recu: ${amount}\nClient: ${email}`);
+        break;
+      }
+
       case 'customer.subscription.updated':
       case 'customer.subscription.created': {
         const subscription = event.data.object;
