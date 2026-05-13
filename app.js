@@ -77,6 +77,32 @@ let selectedUpcomingDate = null;
 // ============================================================
 // GESTION DES ÉCRANS
 // ============================================================
+function trackVirtualPage(screenId) {
+  if (typeof gtag !== 'function') return;
+
+  const pages = {
+    welcomeScreen: { slug: 'accueil', title: 'Accueil' },
+    signupScreen: { slug: 'inscription', title: 'Inscription' },
+    loginScreen: { slug: 'connexion', title: 'Connexion' },
+    proScreen: { slug: 'pro', title: 'Passer à PRO' },
+    main: { slug: 'application', title: 'Application' }
+  };
+
+  const page = pages[screenId];
+  if (!page) return;
+
+  const basePath = window.location.pathname.endsWith('/')
+    ? window.location.pathname
+    : window.location.pathname.replace(/\/[^/]*$/, '/');
+  const pagePath = `${basePath}${page.slug}`;
+
+  gtag('event', 'page_view', {
+    page_title: `Avant la Paie - ${page.title}`,
+    page_location: `${window.location.origin}${pagePath}`,
+    page_path: pagePath
+  });
+}
+
 function showScreen(screenId) {
   ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen'].forEach(id => {
     const el = document.getElementById(id);
@@ -89,6 +115,8 @@ function showScreen(screenId) {
   } else {
     document.getElementById(screenId).style.display = 'flex';
   }
+
+  trackVirtualPage(screenId);
 }
 
 // ============================================================
