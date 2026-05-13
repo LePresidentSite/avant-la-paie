@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v27';
+const CACHE = 'avantlapaie-v29';
 const ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,8 @@ const ASSETS = [
   './config.js',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './apercu-facebook.jpg'
 ];
 
 self.addEventListener('install', e => {
