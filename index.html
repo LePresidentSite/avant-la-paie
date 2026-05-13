@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0f0e17">
+<meta name="theme-color" content="#0F1115">
 <title>Avant la Paie</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-B33RDK53TM"></script>
 <script>
@@ -1150,6 +1150,536 @@
     text-decoration: underline;
     cursor: pointer;
   }
+
+  /* ============================================
+     REFONTE PREMIUM FUTURISTE - DARK DOPAMINE
+     ============================================ */
+  :root {
+    --bg: #0F1115;
+    --surface: rgba(23, 26, 33, 0.82);
+    --surface-2: rgba(29, 33, 42, 0.9);
+    --ink: #F5F5F5;
+    --ink-soft: #9CA3AF;
+    --accent: #FF8A3D;
+    --accent-2: #FFB84D;
+    --good: #78F0A6;
+    --warn: #FF6B8A;
+    --line: rgba(255,255,255,0.11);
+    --radius: 26px;
+    --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display: 'Fraunces', Georgia, serif;
+    --glass: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028));
+    --warm-glow: 0 0 34px rgba(255,184,77,0.18), 0 18px 60px rgba(0,0,0,0.42);
+  }
+
+  body * { letter-spacing: 0 !important; }
+
+  html, body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+  }
+
+  body {
+    background:
+      linear-gradient(180deg, #0F1115 0%, #0A0B0F 44%, #111014 100%);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      linear-gradient(135deg, rgba(255,184,77,0.10), transparent 28%),
+      linear-gradient(315deg, rgba(255,138,61,0.08), transparent 34%);
+  }
+
+  .auth-screen,
+  .app {
+    animation: softIn 0.45s ease both;
+  }
+
+  @keyframes softIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .app {
+    max-width: 620px;
+    padding: 28px 18px 72px;
+  }
+
+  .auth-card {
+    max-width: 460px;
+  }
+
+  .auth-logo,
+  .logo {
+    font-family: var(--font-display);
+    color: var(--ink);
+    text-shadow: 0 0 24px rgba(255,184,77,0.18);
+  }
+
+  .auth-logo span,
+  .logo span {
+    color: var(--accent-2);
+    text-shadow: 0 0 18px rgba(255,184,77,0.42);
+  }
+
+  .auth-tagline,
+  .auth-form .subtitle,
+  .remaining .sub {
+    color: var(--ink-soft);
+    font-family: var(--font-ui);
+    font-style: normal;
+  }
+
+  .auth-form,
+  .total-revenus,
+  .remaining,
+  .item,
+  .upcoming-card,
+  #cycleBar,
+  .modal,
+  .cal-popup,
+  .upcoming-popup,
+  .user-dropdown {
+    background: var(--glass) !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.42);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .auth-form,
+  .remaining,
+  .total-revenus,
+  .upcoming-card,
+  #cycleBar {
+    border-radius: var(--radius) !important;
+  }
+
+  .auth-form {
+    padding: 30px 24px;
+  }
+
+  .auth-form h2,
+  .section-title h2,
+  .modal h3,
+  .upcoming-card-title,
+  .upcoming-head h3,
+  .upcoming-day-title h4 {
+    font-family: var(--font-display);
+    font-style: normal;
+  }
+
+  .auth-field label,
+  .field label,
+  .presets-label,
+  .section-title span,
+  .remaining .label,
+  .total-revenus .label,
+  .total-revenus .countdown,
+  .upcoming-card-sub,
+  .item-amount,
+  .user-dropdown .user-plan {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: none;
+  }
+
+  .auth-input,
+  input[type="number"],
+  input[type="date"],
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  .date-trigger {
+    background: rgba(5,7,11,0.72);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 18px;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    min-height: 54px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  }
+
+  .auth-input:focus,
+  input:focus,
+  .date-trigger:active {
+    border-color: rgba(255,184,77,0.72);
+    box-shadow: 0 0 0 4px rgba(255,184,77,0.10), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .auth-btn,
+  .btn-primary,
+  #newCycleBtn {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent)) !important;
+    color: #14100B !important;
+    border-radius: 18px !important;
+    box-shadow: 0 14px 34px rgba(255,138,61,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
+    font-family: var(--font-ui) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .auth-btn:hover,
+  .btn-primary:hover,
+  #newCycleBtn:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow: 0 18px 44px rgba(255,138,61,0.34), inset 0 1px 0 rgba(255,255,255,0.34);
+  }
+
+  .btn-ghost,
+  .auth-btn.ghost,
+  .cal-actions button,
+  .upcoming-cal-btn {
+    background: rgba(255,255,255,0.04) !important;
+    border-color: rgba(255,255,255,0.10) !important;
+    color: var(--ink) !important;
+    border-radius: 16px !important;
+  }
+
+  header {
+    margin-bottom: 22px;
+  }
+
+  .date {
+    font-size: 12px;
+    color: #C8CED8;
+  }
+
+  .user-btn,
+  .icon-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .user-btn:hover,
+  .icon-btn:hover {
+    background: rgba(255,184,77,0.12);
+    box-shadow: 0 0 18px rgba(255,184,77,0.16);
+  }
+
+  .app-affirmation {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 18px;
+    padding: 18px 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, rgba(255,184,77,0.12), rgba(255,255,255,0.035));
+    border: 1px solid rgba(255,184,77,0.18);
+    box-shadow: var(--warm-glow);
+  }
+
+  .app-affirmation::after {
+    content: "";
+    position: absolute;
+    inset: auto 16px 0 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,184,77,0.6), transparent);
+  }
+
+  .app-affirmation .kicker {
+    display: block;
+    color: var(--accent-2);
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .app-affirmation strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1.15;
+    margin-bottom: 7px;
+  }
+
+  .app-affirmation span:last-child {
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .upcoming-card {
+    grid-template-columns: 50px 1fr 26px;
+    gap: 14px;
+    padding: 16px 18px;
+    margin: 0 0 18px;
+    background: linear-gradient(145deg, rgba(255,184,77,0.09), rgba(255,255,255,0.032)) !important;
+  }
+
+  .upcoming-card-icon,
+  .item-emoji {
+    background: linear-gradient(145deg, rgba(255,184,77,0.18), rgba(255,138,61,0.08));
+    border: 1px solid rgba(255,184,77,0.18);
+    box-shadow: 0 0 18px rgba(255,184,77,0.12);
+  }
+
+  .upcoming-card-title {
+    font-size: 17px;
+  }
+
+  #cycleBar {
+    padding: 18px !important;
+    margin: 20px 0 28px !important;
+    gap: 14px !important;
+    background: linear-gradient(145deg, rgba(255,138,61,0.11), rgba(255,255,255,0.035)) !important;
+  }
+
+  #cycleBarText {
+    color: #D6D9E0;
+    font-family: var(--font-ui);
+    font-style: normal;
+  }
+
+  #newCycleBtn {
+    padding: 12px 16px !important;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    margin: 30px 4px 14px;
+  }
+
+  .section-title h2 {
+    font-size: 22px;
+    color: var(--ink);
+  }
+
+  .total-revenus {
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 40px rgba(120,240,166,0.10), 0 20px 70px rgba(0,0,0,0.38);
+  }
+
+  .total-revenus::before {
+    background: linear-gradient(120deg, rgba(120,240,166,0.16), transparent 55%);
+  }
+
+  .total-revenus .amount,
+  .remaining .amount {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
+
+  .total-revenus .amount {
+    color: var(--good);
+    font-size: 40px;
+    text-shadow: 0 0 24px rgba(120,240,166,0.22);
+  }
+
+  .remaining {
+    padding: 32px 24px;
+    margin: 24px 0 12px;
+    box-shadow: 0 0 42px rgba(255,184,77,0.12), 0 26px 80px rgba(0,0,0,0.42);
+  }
+
+  .remaining::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(140deg, rgba(255,184,77,0.14), transparent 48%);
+  }
+
+  .remaining > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .remaining .amount {
+    font-size: clamp(48px, 12vw, 72px);
+    text-shadow: 0 0 26px rgba(255,184,77,0.18);
+  }
+
+  .remaining .amount.warn {
+    color: var(--accent-2);
+  }
+
+  .remaining .amount.good {
+    color: var(--good);
+    text-shadow: 0 0 28px rgba(120,240,166,0.20);
+  }
+
+  .remaining .amount.over {
+    color: var(--warn);
+    text-shadow: 0 0 22px rgba(255,107,138,0.20);
+  }
+
+  .progress-bar,
+  .saving-progress {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .progress-bar div,
+  .saving-progress div {
+    background: linear-gradient(90deg, var(--accent-2), var(--accent), #A78BFA);
+    box-shadow: 0 0 18px rgba(255,184,77,0.28);
+  }
+
+  .item {
+    border-radius: 22px;
+    padding: 16px 16px;
+    margin-bottom: 12px;
+  }
+
+  .item.received,
+  .item.allocated {
+    border-color: rgba(120,240,166,0.28) !important;
+    box-shadow: 0 0 24px rgba(120,240,166,0.08);
+  }
+
+  .item-name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .item-amount strong.green {
+    color: var(--good);
+  }
+
+  .item-amount strong.saving {
+    color: #D8C7FF;
+  }
+
+  .rec-badge {
+    background: rgba(255,184,77,0.12);
+    border: 1px solid rgba(255,184,77,0.16);
+    color: var(--accent-2);
+    font-size: 10px;
+  }
+
+  .rec-badge.green {
+    background: rgba(120,240,166,0.12);
+    border-color: rgba(120,240,166,0.18);
+    color: var(--good);
+  }
+
+  .icon-btn.check.on {
+    background: linear-gradient(135deg, var(--good), #48C781);
+    color: #06110A;
+    box-shadow: 0 0 20px rgba(120,240,166,0.22);
+  }
+
+  .add-inline {
+    min-height: 54px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.035);
+    border: 1px dashed rgba(255,255,255,0.14);
+    color: #D6D9E0;
+    font-family: var(--font-ui);
+    font-size: 15px;
+  }
+
+  .add-inline:hover {
+    background: rgba(255,184,77,0.08);
+    border-color: rgba(255,184,77,0.28);
+    color: var(--ink);
+  }
+
+  .modal {
+    border-radius: 28px 28px 0 0;
+  }
+
+  .modal h3 .badge,
+  .auth-trial-badge {
+    background: rgba(255,184,77,0.12);
+    border: 1px solid rgba(255,184,77,0.18);
+    color: var(--accent-2);
+  }
+
+  .preset-chip,
+  .rec-btn,
+  .emoji-pick button {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.10);
+    color: var(--ink);
+  }
+
+  .preset-chip:hover,
+  .rec-btn:hover,
+  .emoji-pick button:hover {
+    border-color: rgba(255,184,77,0.28);
+    background: rgba(255,184,77,0.08);
+  }
+
+  .rec-btn.sel,
+  .emoji-pick button.sel {
+    background: rgba(255,184,77,0.14);
+    border-color: var(--accent-2);
+    color: var(--accent-2);
+    box-shadow: 0 0 18px rgba(255,184,77,0.16);
+  }
+
+  .cal-popup,
+  .upcoming-popup {
+    border-radius: 26px;
+    box-shadow: 0 0 44px rgba(255,184,77,0.12), 0 24px 90px rgba(0,0,0,0.52);
+  }
+
+  .cal-day.today,
+  .upcoming-cal-day.has-payment {
+    color: var(--accent-2);
+    border-color: rgba(255,184,77,0.28);
+    background: rgba(255,184,77,0.10);
+  }
+
+  .cal-day.selected,
+  .upcoming-cal-day.selected,
+  .cal-actions button.primary {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #14100B;
+    border-color: transparent;
+  }
+
+  .upcoming-item {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px;
+  }
+
+  @media (hover: hover) {
+    .item:hover,
+    .upcoming-card:hover,
+    .auth-form:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,184,77,0.22) !important;
+      box-shadow: 0 0 34px rgba(255,184,77,0.12), 0 22px 70px rgba(0,0,0,0.42);
+    }
+  }
+
+  @media (min-width: 900px) {
+    .app {
+      max-width: 760px;
+      padding-top: 42px;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .app {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .app-affirmation strong {
+      font-size: 18px;
+    }
+
+    .remaining {
+      padding: 28px 18px;
+    }
+
+    #cycleBar {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1326,6 +1856,12 @@
     </div>
   </header>
 
+  <div class="app-affirmation">
+    <span class="kicker">Calme financier</span>
+    <strong>Chaque petite décision te rapproche du calme.</strong>
+    <span>Bravo ✨ tu avances à ton rythme.</span>
+  </div>
+
   <button class="upcoming-card" id="upcomingBtn" data-action="open-upcoming" type="button">
     <span class="upcoming-card-icon">📅</span>
     <span class="upcoming-card-copy">
@@ -1487,11 +2023,11 @@
 
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="config.js?v=30"></script>
+<script src="app.js?v=31"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=29').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=31').catch(() => {});
   }
 </script>
 </body>
