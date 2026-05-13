@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#F8F6F3">
+<meta name="theme-color" content="#0F172A">
 <meta name="description" content="Avant la Paie est une application de budget préventif pensée pour les cerveaux TDAH, l'anxiété financière et les vies débordées.">
 <title>Avant la Paie - Budget préventif TDAH</title>
 <meta property="og:title" content="Avant la Paie - Budget préventif TDAH">
@@ -622,6 +622,409 @@
       padding: 11px 13px;
     }
   }
+
+  /* ============================================
+     REFONTE BLEU ROYAL PREMIUM - LANDING PAGE
+     ============================================ */
+  :root {
+    --bg: #0F172A;
+    --card: rgba(15, 23, 42, 0.66);
+    --ink: #F8FAFC;
+    --muted: #CBD5E1;
+    --soft: rgba(96, 165, 250, 0.14);
+    --accent: #2563EB;
+    --accent-2: #60A5FA;
+    --accent-soft: rgba(96, 165, 250, 0.18);
+    --warm: #FBBF24;
+    --mint: #93C5FD;
+    --coral: #FBBF24;
+    --line: rgba(255,255,255,0.12);
+    --shadow: 0 28px 90px rgba(2, 6, 23, 0.42);
+    --shadow-soft: 0 18px 55px rgba(2, 6, 23, 0.30);
+    --radius: 28px;
+  }
+
+  body {
+    background:
+      radial-gradient(820px 520px at 12% 0%, rgba(37,99,235,0.34), transparent 68%),
+      radial-gradient(720px 460px at 88% 18%, rgba(96,165,250,0.22), transparent 66%),
+      linear-gradient(145deg, #0F172A 0%, #111A35 42%, #07111F 100%);
+    color: var(--ink);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      linear-gradient(120deg, rgba(255,255,255,0.045), transparent 34%),
+      radial-gradient(circle at 50% 0%, rgba(96,165,250,0.10), transparent 42%);
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.22;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
+  }
+
+  .nav {
+    background: rgba(15,23,42,0.72);
+    border-bottom: 1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 12px 42px rgba(2,6,23,0.20);
+  }
+
+  .brand {
+    color: var(--ink);
+  }
+
+  .brand img {
+    box-shadow: 0 0 28px rgba(96,165,250,0.22);
+  }
+
+  .brand span span {
+    color: var(--accent-2);
+  }
+
+  .nav-link {
+    color: rgba(203,213,225,0.82);
+  }
+
+  .nav-link:hover {
+    color: #fff;
+  }
+
+  .nav-cta,
+  .btn.primary {
+    background: linear-gradient(135deg, #60A5FA, #2563EB);
+    color: #FFFFFF;
+    box-shadow: 0 18px 40px rgba(37,99,235,0.34);
+  }
+
+  .btn.secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--ink);
+    border-color: rgba(255,255,255,0.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .nav-cta:hover,
+  .btn:hover {
+    box-shadow: 0 22px 48px rgba(37,99,235,0.42);
+  }
+
+  .hero {
+    max-width: 1320px;
+    margin: 34px auto 0;
+    border-radius: 48px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background:
+      radial-gradient(620px 420px at 72% 22%, rgba(96,165,250,0.26), transparent 62%),
+      radial-gradient(420px 300px at 20% 10%, rgba(251,191,36,0.08), transparent 66%),
+      linear-gradient(135deg, rgba(30,58,138,0.78), rgba(15,23,42,0.92) 54%, rgba(6,13,28,0.96));
+    box-shadow: 0 42px 110px rgba(2,6,23,0.44);
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(110deg, rgba(255,255,255,0.09), transparent 32%),
+      radial-gradient(circle at 85% 12%, rgba(96,165,250,0.20), transparent 28%);
+  }
+
+  .hero-content,
+  .hero-visual {
+    position: relative;
+    z-index: 1;
+  }
+
+  .pill {
+    background: rgba(96,165,250,0.13);
+    color: #DBEAFE;
+    border: 1px solid rgba(147,197,253,0.22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(14px);
+  }
+
+  h1 {
+    color: var(--ink);
+    text-shadow: 0 22px 70px rgba(96,165,250,0.18);
+  }
+
+  .hero-copy {
+    color: rgba(226,232,240,0.88);
+    max-width: 620px;
+  }
+
+  .micro-note {
+    background: rgba(255,255,255,0.08);
+    color: #E2E8F0;
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .hero-visual {
+    min-height: 610px;
+  }
+
+  .hero-visual::before {
+    content: "";
+    position: absolute;
+    inset: 34px -10px 34px 18px;
+    border-radius: 42px;
+    background:
+      linear-gradient(145deg, rgba(37,99,235,0.24), rgba(255,255,255,0.08)),
+      radial-gradient(circle at 60% 20%, rgba(96,165,250,0.30), transparent 38%);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 24px 80px rgba(2,6,23,0.30);
+    transform: rotate(-2deg);
+  }
+
+  .hero-visual::after {
+    content: "Chaque petite décision te rapproche de tes objectifs.";
+    position: absolute;
+    right: 0;
+    top: 58px;
+    width: 210px;
+    padding: 18px;
+    border-radius: 24px;
+    color: #0F172A;
+    background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(219,234,254,0.92));
+    border: 1px solid rgba(255,255,255,0.62);
+    box-shadow: 0 24px 70px rgba(2,6,23,0.24);
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .phone {
+    width: min(354px, 80vw);
+    background: linear-gradient(145deg, rgba(7,17,33,0.98), rgba(18,30,58,0.95));
+    border-color: rgba(191,219,254,0.26);
+    box-shadow:
+      0 38px 105px rgba(2,6,23,0.54),
+      0 0 54px rgba(96,165,250,0.18),
+      inset 0 1px 0 rgba(255,255,255,0.16);
+  }
+
+  .phone-screen {
+    background:
+      radial-gradient(420px 280px at 96% 4%, rgba(96,165,250,0.20), transparent 58%),
+      radial-gradient(360px 240px at 0% 100%, rgba(251,191,36,0.08), transparent 60%),
+      linear-gradient(180deg, #08111F 0%, #0F172A 100%);
+    border-color: rgba(191,219,254,0.14);
+  }
+
+  .mock-logo span,
+  .mock-meta {
+    color: #60A5FA;
+  }
+
+  .mock-avatar {
+    background: rgba(96,165,250,0.12);
+    border-color: rgba(96,165,250,0.22);
+  }
+
+  .mock-card {
+    background: linear-gradient(145deg, rgba(37,99,235,0.24), rgba(15,23,42,0.92));
+    border-color: rgba(96,165,250,0.24);
+    box-shadow: 0 0 34px rgba(96,165,250,0.10), 0 18px 45px rgba(0,0,0,0.28);
+  }
+
+  .mock-label,
+  .mock-sub {
+    color: #BFDBFE;
+  }
+
+  .mock-money {
+    color: #F8FAFC;
+    text-shadow: 0 0 28px rgba(96,165,250,0.20);
+  }
+
+  .mock-row {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .mock-icon {
+    background: rgba(96,165,250,0.14);
+    box-shadow: 0 0 22px rgba(96,165,250,0.12);
+  }
+
+  .floating-card {
+    background: rgba(15,23,42,0.72);
+    color: #E2E8F0;
+    border-color: rgba(255,255,255,0.14);
+    box-shadow: 0 20px 55px rgba(2,6,23,0.34);
+    backdrop-filter: blur(16px);
+  }
+
+  section {
+    position: relative;
+  }
+
+  .section-inner {
+    max-width: 1180px;
+  }
+
+  .section-kicker {
+    color: #93C5FD;
+  }
+
+  .section-title {
+    color: var(--ink);
+  }
+
+  .section-sub,
+  .feature p,
+  .step p,
+  .story-card p,
+  .price-note,
+  .included,
+  footer,
+  footer a {
+    color: rgba(203,213,225,0.86);
+  }
+
+  .feature,
+  .story-card,
+  .price-card,
+  .quote-card,
+  .step,
+  .story-photo-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.085), rgba(255,255,255,0.035));
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+  }
+
+  .feature:hover {
+    box-shadow: 0 26px 80px rgba(37,99,235,0.18);
+    border-color: rgba(96,165,250,0.25);
+  }
+
+  .feature-icon,
+  .step-num {
+    background: linear-gradient(135deg, rgba(96,165,250,0.26), rgba(37,99,235,0.16));
+    color: #DBEAFE;
+    border: 1px solid rgba(147,197,253,0.20);
+  }
+
+  .soft-band {
+    background:
+      radial-gradient(720px 420px at 18% 20%, rgba(37,99,235,0.18), transparent 66%),
+      linear-gradient(180deg, rgba(15,23,42,0.12), rgba(30,58,138,0.18));
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .story-photo-card {
+    background:
+      radial-gradient(circle at 50% 32%, rgba(96,165,250,0.24), transparent 44%),
+      linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
+  }
+
+  .founder-photo {
+    background:
+      radial-gradient(circle at 70% 24%, rgba(251,191,36,0.78) 0 15%, transparent 16%),
+      radial-gradient(circle at 30% 78%, rgba(96,165,250,0.55) 0 22%, transparent 23%),
+      linear-gradient(145deg, #DBEAFE, #1D4ED8);
+    color: #F8FAFC;
+    border-color: rgba(255,255,255,0.60);
+    box-shadow: 0 22px 70px rgba(37,99,235,0.30);
+  }
+
+  .quote-card {
+    background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(96,165,250,0.08));
+    color: #F8FAFC;
+    border-color: rgba(251,191,36,0.18);
+  }
+
+  .pricing {
+    background:
+      radial-gradient(720px 420px at 84% 14%, rgba(96,165,250,0.22), transparent 64%),
+      linear-gradient(180deg, rgba(15,23,42,0.16), rgba(8,18,36,0.32));
+  }
+
+  .price-card.highlight {
+    border-color: rgba(96,165,250,0.30);
+    box-shadow: 0 34px 90px rgba(37,99,235,0.22);
+  }
+
+  .price-badge {
+    background: rgba(96,165,250,0.14);
+    color: #DBEAFE;
+    border: 1px solid rgba(147,197,253,0.18);
+  }
+
+  .price-name {
+    color: #93C5FD;
+  }
+
+  .price {
+    color: var(--ink);
+  }
+
+  .price span {
+    color: rgba(203,213,225,0.82);
+  }
+
+  .cta-band {
+    background:
+      radial-gradient(620px 360px at 50% 10%, rgba(37,99,235,0.24), transparent 66%),
+      linear-gradient(180deg, rgba(15,23,42,0.08), rgba(15,23,42,0.28));
+  }
+
+  @media (max-width: 900px) {
+    .hero {
+      margin: 18px 14px 0;
+      border-radius: 34px;
+    }
+
+    .hero-visual::after {
+      right: 18px;
+      top: 20px;
+      width: min(220px, 62vw);
+    }
+  }
+
+  @media (max-width: 520px) {
+    .hero {
+      padding-inline: 18px;
+      border-radius: 30px;
+    }
+
+    .hero-visual {
+      min-height: 540px;
+    }
+
+    .hero-visual::before {
+      inset: 58px 0 18px;
+      border-radius: 32px;
+    }
+
+    .hero-visual::after {
+      display: none;
+    }
+
+    .phone {
+      width: min(310px, 86vw);
+    }
+  }
 </style>
 </head>
 <body>
@@ -641,9 +1044,9 @@
   <header class="hero">
     <div class="hero-content">
       <div class="pill">Budget préventif pour cerveaux débordés</div>
-      <h1>Reprends doucement le contrôle de tes finances 💛</h1>
+      <h1>Chaque petite décision te rapproche du calme.</h1>
       <p class="hero-copy">
-        Une application pensée pour les cerveaux TDAH, l'anxiété financière et les vies débordées.
+        Une façon plus douce de gérer ton argent, pensée pour les cerveaux TDAH, l'anxiété financière et les vies débordées.
       </p>
       <div class="hero-actions">
         <a class="btn primary" href="index.html">Commencer gratuitement</a>
