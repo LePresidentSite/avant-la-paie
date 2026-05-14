@@ -44,8 +44,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    const origin = req.headers.origin || 'https://lepresidentsite.github.io';
-    const returnUrl = `${origin}/avant-la-paie/`;
+    const returnUrl = 'https://avantlapaie.com/';
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,

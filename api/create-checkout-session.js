@@ -70,9 +70,9 @@ module.exports = async (req, res) => {
     }
 
     // URL de retour après paiement
-    const origin = req.headers.origin || 'https://lepresidentsite.github.io';
-    const successUrl = `${origin}/avant-la-paie/?paiement=success`;
-    const cancelUrl = `${origin}/avant-la-paie/?paiement=annule`;
+    const appUrl = 'https://avantlapaie.com';
+    const successUrl = `${appUrl}/?paiement=success`;
+    const cancelUrl = `${appUrl}/?paiement=annule`;
     const existingCustomerId = await findExistingCustomerId(userId, userEmail);
 
     // Créer la session Stripe Checkout
