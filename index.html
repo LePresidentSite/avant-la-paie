@@ -2067,11 +2067,14 @@
 
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
 <script src="config.js?v=30"></script>
-<script src="app.js?v=32"></script>
+<script src="firebase-config.js?v=1"></script>
+<script src="app.js?v=33"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=31').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=39').catch(() => {});
   }
 </script>
 </body>

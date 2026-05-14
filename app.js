@@ -73,6 +73,8 @@ let selectedRecurrence = 'once';
 let upcomingMonth = new Date();
 upcomingMonth.setDate(1);
 let selectedUpcomingDate = null;
+let pushRegistrationInProgress = false;
+let pushForegroundListenerAttached = false;
 
 // ============================================================
 // GESTION DES ÉCRANS
@@ -133,6 +135,7 @@ async function checkAuth() {
       await loadUserData();
       showScreen('main');
       render();
+      ensurePushNotifications({ ask: false });
       // Vérifier si retour de paiement
       checkPaymentReturn();
     } else {
@@ -236,6 +239,111 @@ function canUseProFeature(featureName) {
   return false;
 }
 
+// ============================================================
+// NOTIFICATIONS PUSH (Firebase Cloud Messaging)
+// ============================================================
+
+function hasFirebasePushConfig() {
+  return typeof FIREBASE_CONFIG !== 'undefined'
+    && FIREBASE_CONFIG
+    && FIREBASE_CONFIG.apiKey
+    && typeof FIREBASE_VAPID_KEY !== 'undefined'
+    && FIREBASE_VAPID_KEY;
+}
+
+async function isPushSupported() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if (typeof firebase === 'undefined' || !firebase.messaging) return false;
+  if (!hasFirebasePushConfig()) return false;
+
+  try {
+    if (typeof firebase.messaging.isSupported === 'function') {
+      return await firebase.messaging.isSupported();
+    }
+  } catch (e) {
+    console.warn('Notifications push non supportees:', e);
+    return false;
+  }
+
+  return true;
+}
+
+function initFirebaseAppOnce() {
+  if (!firebase.apps || !firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  }
+}
+
+async function savePushToken(token) {
+  if (!currentUser || !token) return;
+
+  const { error } = await supabaseClient
+    .from('push_tokens')
+    .upsert({
+      user_id: currentUser.id,
+      email: currentUser.email || null,
+      token,
+      platform: 'web',
+      enabled: true,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'token'
+    });
+
+  if (error) throw error;
+}
+
+async function ensurePushNotifications(options = {}) {
+  if (!currentUser || pushRegistrationInProgress) return;
+  if (!(await isPushSupported())) return;
+
+  const shouldAsk = options.ask === true;
+  if (Notification.permission === 'denied') return;
+  if (Notification.permission === 'default' && !shouldAsk) return;
+
+  pushRegistrationInProgress = true;
+
+  try {
+    const permission = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+
+    if (permission !== 'granted') return;
+
+    initFirebaseAppOnce();
+    const registration = await navigator.serviceWorker.register('sw.js?v=39');
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({
+      vapidKey: FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration
+    });
+
+    if (token) {
+      await savePushToken(token);
+    }
+
+    if (!pushForegroundListenerAttached) {
+      messaging.onMessage(payload => {
+        const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
+        const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
+
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png'
+          });
+        }
+      });
+      pushForegroundListenerAttached = true;
+    }
+  } catch (e) {
+    console.warn('Notifications push non activees:', e);
+  } finally {
+    pushRegistrationInProgress = false;
+  }
+}
+
 // Inscription
 async function signUp(email, password, passwordConfirm) {
   const errorEl = document.getElementById('signupError');
@@ -297,6 +405,7 @@ async function signUp(email, password, passwordConfirm) {
         await loadUserData();
         showScreen('main');
         render();
+        ensurePushNotifications({ ask: true });
       } else {
         // Confirmation par email activée
         successEl.textContent = '✓ Compte créé! Vérifie ton courriel pour confirmer.';
@@ -347,6 +456,7 @@ async function signIn(email, password) {
     await loadUserData();
     showScreen('main');
     render();
+    ensurePushNotifications({ ask: true });
     btn.disabled = false;
     btn.textContent = 'Se connecter';
   } catch (e) {

@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v38';
+const CACHE = 'avantlapaie-v39';
 const ASSETS = [
   './',
   './index.html',
@@ -6,12 +6,43 @@ const ASSETS = [
   './confidentialite.html',
   './app.js',
   './config.js',
+  './firebase-config.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
   './apercu-facebook.jpg',
   './apercu-application-reelle.jpeg'
 ];
+
+try {
+  importScripts('./firebase-config.js');
+
+  if (self.FIREBASE_CONFIG && self.FIREBASE_CONFIG.apiKey) {
+    importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
+    importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
+
+    firebase.initializeApp(self.FIREBASE_CONFIG);
+    const messaging = firebase.messaging();
+
+    messaging.onBackgroundMessage(payload => {
+      const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
+      const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
+
+      self.registration.showNotification(title, {
+        body,
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        tag: payload.data?.itemId ? `avant-la-paie-${payload.data.itemId}` : 'avant-la-paie-rappel',
+        renotify: false,
+        data: {
+          url: payload.fcmOptions?.link || payload.data?.url || './'
+        }
+      });
+    });
+  }
+} catch (e) {
+  console.warn('Firebase Messaging non initialise dans le service worker:', e);
+}
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(()=>{}));
@@ -40,5 +71,20 @@ self.addEventListener('fetch', e => {
       caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
       return resp;
     }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || './';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+      return null;
+    })
   );
 });
