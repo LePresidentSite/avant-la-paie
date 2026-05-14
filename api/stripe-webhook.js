@@ -147,8 +147,24 @@ module.exports = async (req, res) => {
         const session = event.data.object;
         const userId = session.client_reference_id || session.metadata?.user_id;
         const subscriptionId = session.subscription;
+        const isLifetime = session.mode === 'payment' || session.metadata?.plan === 'lifetime';
 
-        if (userId && subscriptionId) {
+        if (userId && isLifetime) {
+          await updateUserSubscription(userId, {
+            status: 'lifetime',
+            stripe_customer_id: session.customer,
+            stripe_subscription_id: null,
+            current_period_end: null
+          });
+
+          const email = await getCustomerEmail(
+            session.customer,
+            session.customer_details?.email || session.customer_email
+          );
+          const amount = formatMoneyFromCents(session.amount_total, session.currency);
+
+          await sendOwnerSms(`Avant la Paie\nAcces a vie active\nClient: ${email}\nMontant: ${amount}`);
+        } else if (userId && subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           await updateUserSubscription(userId, {
             status: subscription.status,

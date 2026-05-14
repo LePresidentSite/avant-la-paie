@@ -59,14 +59,21 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Données manquantes' });
     }
 
-    // Choisir le bon Price ID selon le plan
     let priceId;
+    const isLifetime = plan === 'lifetime';
+
     if (plan === 'monthly') {
       priceId = process.env.STRIPE_PRICE_MONTHLY;
     } else if (plan === 'yearly') {
       priceId = process.env.STRIPE_PRICE_YEARLY;
+    } else if (isLifetime) {
+      priceId = process.env.STRIPE_PRICE_LIFETIME;
     } else {
       return res.status(400).json({ error: 'Plan invalide' });
+    }
+
+    if (!priceId) {
+      return res.status(500).json({ error: `Price ID manquant pour le plan ${plan}` });
     }
 
     // URL de retour après paiement
@@ -77,7 +84,7 @@ module.exports = async (req, res) => {
 
     // Créer la session Stripe Checkout
     const checkoutParams = {
-      mode: 'subscription',
+      mode: isLifetime ? 'payment' : 'subscription',
       allow_promotion_codes: true,
       payment_method_types: ['card'],
       line_items: [{
@@ -87,23 +94,31 @@ module.exports = async (req, res) => {
       client_reference_id: userId,
       metadata: {
         user_id: userId,
-        plan: plan
+        plan: plan,
+        access_type: isLifetime ? 'lifetime' : 'subscription'
       },
-      subscription_data: {
-        trial_period_days: 30,
-        metadata: {
-          user_id: userId
-        }
-      },
-      success_url: successUrl,
+      success_url: `${successUrl}&plan=${plan}`,
       cancel_url: cancelUrl,
       locale: 'fr-CA'
     };
+
+    if (!isLifetime) {
+      checkoutParams.subscription_data = {
+        trial_period_days: 30,
+        metadata: {
+          user_id: userId,
+          plan: plan
+        }
+      };
+    }
 
     if (existingCustomerId) {
       checkoutParams.customer = existingCustomerId;
     } else {
       checkoutParams.customer_email = userEmail;
+      if (isLifetime) {
+        checkoutParams.customer_creation = 'always';
+      }
     }
 
     const session = await stripe.checkout.sessions.create(checkoutParams);
