@@ -87,6 +87,7 @@ function trackVirtualPage(screenId) {
     signupScreen: { slug: 'inscription', title: 'Inscription' },
     loginScreen: { slug: 'connexion', title: 'Connexion' },
     proScreen: { slug: 'pro', title: 'Passer à PRO' },
+    billingScreen: { slug: 'facturation', title: 'Facturation et abonnement' },
     main: { slug: 'application', title: 'Application' }
   };
 
@@ -106,7 +107,7 @@ function trackVirtualPage(screenId) {
 }
 
 function showScreen(screenId) {
-  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen'].forEach(id => {
+  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen', 'billingScreen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -1107,7 +1108,7 @@ function render() {
         planEl.textContent = '✨ Accès à vie actif';
         planEl.style.color = 'var(--good)';
         upgradeBtn.style.display = 'none';
-        manageBillingBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       } else if (status === 'trialing' && isProUser()) {
         planEl.textContent = stripeTrialDaysLeft !== null
           ? `⏳ Essai PRO · ${stripeTrialDaysLeft}j restants`
@@ -1644,7 +1645,7 @@ document.getElementById('upgradeBtn').onclick = () => {
 
 document.getElementById('manageBillingBtn').onclick = () => {
   document.getElementById('userDropdown').classList.remove('show');
-  openCustomerPortal();
+  openBillingOptions();
 };
 
 document.getElementById('enableNotificationsBtn').onclick = async () => {
@@ -1662,8 +1663,56 @@ document.getElementById('proBackBtn').onclick = () => {
   showScreen('main');
 };
 
+document.getElementById('billingBackBtn').onclick = () => {
+  showScreen('main');
+};
+
+function getBillingStatusText() {
+  if (!currentSubscription) {
+    return 'Tu es sur le plan gratuit.';
+  }
+
+  const status = currentSubscription.status;
+  if (status === 'lifetime') return 'Accès à vie actif ✨';
+  if (status === 'trialing') {
+    const days = getStripeTrialDaysLeft();
+    return days !== null
+      ? `Essai PRO actif · ${days}j restants`
+      : 'Essai PRO actif';
+  }
+  if (status === 'active') return 'Abonnement PRO actif.';
+  if (status === 'past_due') return 'Paiement en attente.';
+  if (status === 'canceled') return 'Abonnement annulé. Tu peux choisir un nouvel accès.';
+
+  return 'Statut de facturation : ' + status;
+}
+
+function renderBillingOptions() {
+  const currentPlanEl = document.getElementById('billingCurrentPlan');
+  const monthlyBtn = document.getElementById('billingMonthlyBtn');
+  const yearlyBtn = document.getElementById('billingYearlyBtn');
+  const lifetimeBtn = document.getElementById('billingLifetimeBtn');
+  const portalBtn = document.getElementById('billingPortalBtn');
+
+  currentPlanEl.textContent = getBillingStatusText();
+
+  const isLifetime = currentSubscription?.status === 'lifetime';
+  const hasStripeCustomer = Boolean(currentSubscription?.stripe_customer_id);
+
+  monthlyBtn.style.display = isLifetime ? 'none' : 'block';
+  yearlyBtn.style.display = isLifetime ? 'none' : 'block';
+  lifetimeBtn.style.display = isLifetime ? 'none' : 'block';
+  portalBtn.style.display = hasStripeCustomer ? 'block' : 'none';
+}
+
+async function openBillingOptions() {
+  await loadSubscription();
+  renderBillingOptions();
+  showScreen('billingScreen');
+}
+
 // Fonction pour démarrer un abonnement
-async function startSubscription(plan) {
+async function startSubscription(plan, sourceButton = null) {
   if (!currentUser) {
     alert('Tu dois être connecté(e)');
     return;
@@ -1674,7 +1723,7 @@ async function startSubscription(plan) {
     yearly: document.getElementById('subscribeYearlyBtn'),
     lifetime: document.getElementById('subscribeLifetimeBtn')
   };
-  const btn = buttonsByPlan[plan];
+  const btn = sourceButton || buttonsByPlan[plan];
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Redirection vers Stripe…';
@@ -1712,6 +1761,75 @@ async function startSubscription(plan) {
 document.getElementById('subscribeMonthlyBtn').onclick = () => startSubscription('monthly');
 document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription('yearly');
 document.getElementById('subscribeLifetimeBtn').onclick = () => startSubscription('lifetime');
+
+async function changeRecurringPlan(plan, sourceButton) {
+  if (!currentUser) {
+    alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  if (!currentSubscription || !currentSubscription.stripe_subscription_id || currentSubscription.status === 'canceled') {
+    startSubscription(plan, sourceButton);
+    return;
+  }
+
+  if (currentSubscription.status === 'lifetime') {
+    alert("Tu as déjà l'accès à vie ✨");
+    return;
+  }
+
+  const label = plan === 'yearly' ? 'PRO annuel à 29,99 $/an' : 'PRO mensuel à 4,99 $/mois';
+  const ok = confirm(
+    `Changer ton abonnement vers ${label}?\n\nStripe ajustera l'abonnement. S'il y a un prorata, il sera géré avec ton moyen de paiement.`
+  );
+  if (!ok) return;
+
+  const btn = sourceButton;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Mise à jour...';
+
+  try {
+    const response = await fetch(`${API_URL}/api/change-subscription-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        plan
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+
+    await loadSubscription();
+    render();
+    renderBillingOptions();
+    alert(data.message || 'Ton abonnement a été mis à jour.');
+  } catch (e) {
+    alert("Impossible de changer l'abonnement : " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('billingMonthlyBtn').onclick = (e) => changeRecurringPlan('monthly', e.currentTarget);
+document.getElementById('billingYearlyBtn').onclick = (e) => changeRecurringPlan('yearly', e.currentTarget);
+document.getElementById('billingLifetimeBtn').onclick = (e) => {
+  if (currentSubscription?.status === 'lifetime') {
+    alert("Tu as déjà l'accès à vie ✨");
+    return;
+  }
+
+  const hasActiveSubscription = Boolean(currentSubscription?.stripe_subscription_id);
+  const ok = hasActiveSubscription
+    ? confirm("Passer à l'accès à vie?\n\nAprès le paiement unique, ton abonnement actuel sera annulé automatiquement.")
+    : true;
+
+  if (ok) startSubscription('lifetime', e.currentTarget);
+};
+document.getElementById('billingPortalBtn').onclick = () => openCustomerPortal();
 
 async function openCustomerPortal() {
   if (!currentUser) {
