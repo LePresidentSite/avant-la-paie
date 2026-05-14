@@ -171,6 +171,7 @@ async function loadSubscription() {
 function checkPaymentReturn() {
   const urlParams = new URLSearchParams(window.location.search);
   const paiement = urlParams.get('paiement');
+  const plan = urlParams.get('plan');
 
   if (paiement === 'success') {
     // Nettoyer l'URL
@@ -179,7 +180,10 @@ function checkPaymentReturn() {
     setTimeout(async () => {
       await loadSubscription();
       render();
-      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.');
+      const message = plan === 'lifetime'
+        ? '🎉 Bienvenue dans PRO!\n\nTon accès à vie est activé. Même accès que PRO, sans date d’expiration.'
+        : '🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.';
+      alert(message);
     }, 2000);
   } else if (paiement === 'annule') {
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -190,6 +194,7 @@ function checkPaymentReturn() {
 function isProUser() {
   if (!currentSubscription) return false;
   const status = currentSubscription.status;
+  if (status === 'lifetime') return true;
   if (status === 'active') return true;
   if (status !== 'trialing') return false;
 
@@ -1098,7 +1103,12 @@ function render() {
     if (currentSubscription) {
       const status = currentSubscription.status;
       const stripeTrialDaysLeft = getStripeTrialDaysLeft();
-      if (status === 'trialing' && isProUser()) {
+      if (status === 'lifetime') {
+        planEl.textContent = '✨ Accès à vie actif';
+        planEl.style.color = 'var(--good)';
+        upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'none';
+      } else if (status === 'trialing' && isProUser()) {
         planEl.textContent = stripeTrialDaysLeft !== null
           ? `⏳ Essai PRO · ${stripeTrialDaysLeft}j restants`
           : '⏳ Essai PRO actif';
@@ -1659,7 +1669,12 @@ async function startSubscription(plan) {
     return;
   }
 
-  const btn = plan === 'yearly' ? document.getElementById('subscribeYearlyBtn') : document.getElementById('subscribeMonthlyBtn');
+  const buttonsByPlan = {
+    monthly: document.getElementById('subscribeMonthlyBtn'),
+    yearly: document.getElementById('subscribeYearlyBtn'),
+    lifetime: document.getElementById('subscribeLifetimeBtn')
+  };
+  const btn = buttonsByPlan[plan];
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Redirection vers Stripe…';
@@ -1696,6 +1711,7 @@ async function startSubscription(plan) {
 
 document.getElementById('subscribeMonthlyBtn').onclick = () => startSubscription('monthly');
 document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription('yearly');
+document.getElementById('subscribeLifetimeBtn').onclick = () => startSubscription('lifetime');
 
 async function openCustomerPortal() {
   if (!currentUser) {

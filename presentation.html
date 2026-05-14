@@ -489,9 +489,9 @@
   }
   .price-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
-    max-width: 820px;
+    max-width: 1080px;
   }
   .price-card {
     padding: 28px;
@@ -1349,24 +1349,37 @@
   <section class="pricing" id="prix">
     <div class="section-inner">
       <div class="section-kicker">Prix simple</div>
-      <h2 class="section-title">Commence gratuitement, passe à PRO quand tu es prête.</h2>
+      <h2 class="section-title">Commence gratuitement, choisis ton rythme ensuite.</h2>
       <p class="section-sub">
         Le plan gratuit permet d'essayer l'essentiel. PRO débloque les revenus illimités,
-        les enveloppes illimitées, les récurrences et le calendrier complet.
+        les enveloppes illimitées, les récurrences, le calendrier complet et les Fonds bonheur.
       </p>
       <div class="price-grid">
         <div class="price-card highlight">
-          <div class="price-badge">Meilleur choix</div>
-          <div class="price-name">Annuel</div>
-          <div class="price">39,99 $ <span>/ an</span></div>
-          <p class="price-note">Environ 3,33 $ par mois, avec 30 jours d'essai.</p>
+          <div class="price-badge">Une seule fois</div>
+          <div class="price-name">Accès à vie ✨</div>
+          <div class="price">39,99 $ <span>une seule fois</span></div>
+          <p class="price-note">Même accès que PRO, sans renouvellement et sans date d'expiration.</p>
           <div class="included">
             <span>✓ Sources de revenus illimitées</span>
             <span>✓ Enveloppes illimitées</span>
             <span>✓ Fonds bonheur avec objectif</span>
-            <span>✓ Récurrences et nouveau cycle</span>
+            <span>✓ Accès permanent aux fonctions PRO</span>
           </div>
-          <a class="btn primary" href="index.html">Commencer l'essai</a>
+          <a class="btn primary" href="index.html">Obtenir l'accès à vie</a>
+        </div>
+        <div class="price-card">
+          <div class="price-badge">Essai 30 jours</div>
+          <div class="price-name">Annuel</div>
+          <div class="price">29,99 $ <span>/ an</span></div>
+          <p class="price-note">Environ 2,50 $ par mois, avec 30 jours gratuits.</p>
+          <div class="included">
+            <span>✓ Même accès PRO</span>
+            <span>✓ Récurrences et nouveau cycle</span>
+            <span>✓ Calendrier préventif complet</span>
+            <span>✓ Annulable depuis ton compte</span>
+          </div>
+          <a class="btn secondary" href="index.html">Commencer l'essai</a>
         </div>
         <div class="price-card">
           <div class="price-name">Mensuel</div>
