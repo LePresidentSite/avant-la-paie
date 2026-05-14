@@ -1851,10 +1851,18 @@ async function openCustomerPortal() {
     const response = await fetch(`${API_URL}/api/create-portal-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id })
+      body: JSON.stringify({
+        userId: currentUser.id,
+        userEmail: currentUser.email
+      })
     });
 
     const data = await response.json();
+
+    if (data.code === 'customer_not_found') {
+      window.location.href = STRIPE_PORTAL_LOGIN_URL;
+      return;
+    }
 
     if (data.error) {
       throw new Error(data.error);
