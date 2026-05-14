@@ -14,6 +14,8 @@ const FIREBASE_CONFIG = {
   appId: '1:918977665853:web:1b8f7dcb318dd2ba2fc354'
 };
 
+const AVANTLAPAIE_APP_URL = 'https://avantlapaie.com/';
+
 // Firebase Console > Project settings > Cloud Messaging
 // > Web Push certificates > Generate key pair
 const FIREBASE_VAPID_KEY = 'BHc03Yq4nTVZntaZuZecqrTOpys958uKKr3qzN-hZEc2TyD3g-ccOLewPF-KE4m8kn7r2xIAaStBLrGYWTxktW4';
@@ -21,4 +23,5 @@ const FIREBASE_VAPID_KEY = 'BHc03Yq4nTVZntaZuZecqrTOpys958uKKr3qzN-hZEc2TyD3g-cc
 if (typeof self !== 'undefined') {
   self.FIREBASE_CONFIG = FIREBASE_CONFIG;
   self.FIREBASE_VAPID_KEY = FIREBASE_VAPID_KEY;
+  self.AVANTLAPAIE_APP_URL = AVANTLAPAIE_APP_URL;
 }

@@ -325,7 +325,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=39');
+    const registration = await navigator.serviceWorker.register('sw.js?v=41');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,

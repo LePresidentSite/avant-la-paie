@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v39';
+const CACHE = 'avantlapaie-v41';
 const ASSETS = [
   './',
   './index.html',
@@ -15,7 +15,7 @@ const ASSETS = [
 ];
 
 try {
-  importScripts('./firebase-config.js');
+  importScripts('./firebase-config.js?v=2');
 
   if (self.FIREBASE_CONFIG && self.FIREBASE_CONFIG.apiKey) {
     importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
@@ -25,6 +25,7 @@ try {
     const messaging = firebase.messaging();
 
     messaging.onBackgroundMessage(payload => {
+      const appUrl = self.AVANTLAPAIE_APP_URL || './';
       const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
       const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
 
@@ -35,7 +36,7 @@ try {
         tag: payload.data?.itemId ? `avant-la-paie-${payload.data.itemId}` : 'avant-la-paie-rappel',
         renotify: false,
         data: {
-          url: payload.fcmOptions?.link || payload.data?.url || './'
+          url: payload.fcmOptions?.link || payload.data?.url || appUrl
         }
       });
     });
@@ -76,7 +77,7 @@ self.addEventListener('fetch', e => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || './';
+  const targetUrl = event.notification.data?.url || self.AVANTLAPAIE_APP_URL || './';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
