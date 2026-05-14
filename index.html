@@ -516,6 +516,38 @@
   }
   .item-amount strong.green { color: var(--good); font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
   .item-amount strong.saving { color: #a78bfa; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .item-progress-meta {
+    width: 100%;
+    max-width: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .item-progress-meta span:first-child {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .item-progress {
+    height: 6px;
+    width: 100%;
+    max-width: 240px;
+    background: rgba(255,255,254,0.06);
+    border-radius: 999px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .item-progress div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #c084fc);
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
   .saving-progress {
     height: 5px;
     width: 100%;
@@ -1513,14 +1545,26 @@
   }
 
   .progress-bar,
-  .saving-progress {
+  .saving-progress,
+  .item-progress {
     background: rgba(255,255,255,0.08);
   }
 
   .progress-bar div,
-  .saving-progress div {
+  .saving-progress div,
+  .item-progress div {
     background: linear-gradient(90deg, var(--accent-2), var(--accent), #A78BFA);
     box-shadow: 0 0 18px rgba(255,184,77,0.28);
+  }
+
+  .item-progress-meta {
+    max-width: 260px;
+    color: rgba(245,245,245,0.58);
+  }
+
+  .item-progress-meta span:first-child {
+    color: var(--accent-2);
+    text-shadow: 0 0 14px rgba(255,184,77,0.18);
   }
 
   .item {
@@ -2024,7 +2068,7 @@
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js?v=30"></script>
-<script src="app.js?v=31"></script>
+<script src="app.js?v=32"></script>
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js?v=31').catch(() => {});

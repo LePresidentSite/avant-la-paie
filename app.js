@@ -425,6 +425,7 @@ async function loadUserData() {
         emoji: e.emoji,
         name: e.name,
         amount: parseFloat(e.amount),
+        target_amount: e.target_amount !== null && e.target_amount !== undefined ? parseFloat(e.target_amount) : null,
         allocated: e.allocated,
         date: e.date || '',
         recurrence: e.recurrence || 'once'
@@ -519,6 +520,7 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
+          target_amount: env.target_amount || null,
           date: env.date || null,
           allocated: env.allocated || false,
           recurrence: env.recurrence || 'once'
@@ -534,6 +536,7 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
+          target_amount: env.target_amount || null,
           date: env.date || null,
           allocated: env.allocated,
           recurrence: env.recurrence || 'once'
@@ -1082,6 +1085,7 @@ function render() {
       const target = parseFloat(item.target_amount) || 0;
       const savedAmount = parseFloat(item.amount) || 0;
       const pctSaved = target > 0 ? Math.min(100, (savedAmount / target) * 100) : 0;
+      const savedPercent = Math.round(pctSaved);
       let when = '';
       if (item.date) {
         const d = daysUntil(item.date);
@@ -1091,7 +1095,13 @@ function render() {
         else when = `<span class="when">${formatDateShort(item.date)}</span>`;
       }
       const progress = target > 0
-        ? `<div class="saving-progress"><div style="width:${pctSaved}%"></div></div>`
+        ? `
+          <div class="item-progress-meta">
+            <span>${savedPercent} %</span>
+            <span>${fmt(savedAmount)} / ${fmt(target)}</span>
+          </div>
+          <div class="item-progress"><div style="width:${pctSaved}%"></div></div>
+        `
         : '';
       const goalText = target > 0 ? `<span> / ${fmt(target)}</span>` : '';
       const div = document.createElement('div');
@@ -1124,6 +1134,19 @@ function render() {
     state.envelopes.forEach(env => {
       const recBadge = (env.recurrence && env.recurrence !== 'once')
         ? `<span class="rec-badge">${getRecurrenceLabel(env.recurrence)}</span>` : '';
+      const allocatedAmount = parseFloat(env.amount) || 0;
+      const targetAmount = parseFloat(env.target_amount) || allocatedAmount;
+      const pctEnv = targetAmount > 0 ? Math.min(100, (allocatedAmount / targetAmount) * 100) : 0;
+      const pctEnvLabel = Math.round(pctEnv);
+      const progress = targetAmount > 0
+        ? `
+          <div class="item-progress-meta">
+            <span>${pctEnvLabel} %</span>
+            <span>${fmt(allocatedAmount)} / ${fmt(targetAmount)}</span>
+          </div>
+          <div class="item-progress"><div style="width:${pctEnv}%"></div></div>
+        `
+        : '';
       let when = '';
       if (env.date) {
         const d = daysUntil(env.date);
@@ -1139,6 +1162,7 @@ function render() {
         <div class="item-info">
           <div class="item-name">${escapeHtml(env.name)}${recBadge}</div>
           <div class="item-amount">${fmt(env.amount)}${when}</div>
+          ${progress}
         </div>
         <div class="item-actions">
           <button class="icon-btn check ${env.allocated?'on':''}" data-env-toggle="${env.id}">${env.allocated?'✓':'○'}</button>
@@ -1184,7 +1208,7 @@ function openModal(type, item = null) {
   }
 
   document.getElementById('nameLabel').textContent = isRev ? 'Source du revenu' : 'Nom de l\'enveloppe';
-  document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant à mettre de côté';
+  document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant alloué';
   document.getElementById('dateField').style.display = 'block';
   document.getElementById('dateLabel').textContent = isRev ? 'Date prévue' : 'Date de la dépense';
   document.getElementById('presetsLabel').textContent = isRev ? 'Sources rapides' : 'Suggestions rapides';
@@ -1202,8 +1226,10 @@ function openModal(type, item = null) {
 
   document.getElementById('itemName').value = item ? item.name : '';
   document.getElementById('itemAmount').value = item ? item.amount : '';
-  document.getElementById('targetField').style.display = isSaving ? 'block' : 'none';
-  document.getElementById('itemTarget').value = item && item.target_amount ? item.target_amount : '';
+  document.getElementById('targetField').style.display = (isSaving || (!isRev && !isSaving)) ? 'block' : 'none';
+  document.getElementById('targetLabel').textContent = isSaving ? 'Objectif total' : 'Montant cible';
+  document.getElementById('itemTarget').placeholder = isSaving ? 'Optionnel' : 'ex. montant total à atteindre';
+  document.getElementById('itemTarget').value = item && item.target_amount ? item.target_amount : (!isRev && item ? item.amount : '');
   document.getElementById('itemDate').value = item && item.date ? item.date : '';
   document.getElementById('deleteBtn').style.display = item ? 'block' : 'none';
 
@@ -1633,6 +1659,7 @@ document.getElementById('saveBtn').onclick = async () => {
       const e = state.envelopes.find(x => x.id === editing.id);
       if (e) {
         e.name = name; e.amount = amount; e.emoji = selectedEmoji;
+        e.target_amount = targetAmount || amount || null;
         e.date = date;
         e.recurrence = selectedRecurrence;
         await saveEnvelope(e, false);
@@ -1640,6 +1667,7 @@ document.getElementById('saveBtn').onclick = async () => {
     } else {
       const newEnv = {
         emoji: selectedEmoji, name, amount, allocated: false,
+        target_amount: targetAmount || amount || null,
         date,
         recurrence: selectedRecurrence
       };
@@ -1650,6 +1678,7 @@ document.getElementById('saveBtn').onclick = async () => {
           emoji: saved.emoji,
           name: saved.name,
           amount: parseFloat(saved.amount),
+          target_amount: saved.target_amount !== null && saved.target_amount !== undefined ? parseFloat(saved.target_amount) : null,
           allocated: saved.allocated,
           date: saved.date || '',
           recurrence: saved.recurrence || 'once'
