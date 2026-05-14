@@ -12,6 +12,42 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+async function findCustomerByEmail(email) {
+  if (!email) return null;
+
+  const customers = await stripe.customers.list({
+    email,
+    limit: 10
+  });
+
+  return customers.data.find(customer => !customer.deleted) || null;
+}
+
+async function saveCustomerId(userId, customerId) {
+  if (!userId || !customerId) return;
+
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      stripe_customer_id: customerId,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id'
+    });
+
+  if (error) {
+    console.warn('Impossible de mettre a jour le client Stripe:', error.message);
+  }
+}
+
+async function createPortalSession(customerId, returnUrl) {
+  return stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl
+  });
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -26,7 +62,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { userId } = req.body;
+    const { userId, userEmail } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'Utilisateur manquant' });
@@ -45,12 +81,31 @@ module.exports = async (req, res) => {
     }
 
     const returnUrl = 'https://avantlapaie.com/';
+    let customerId = subscription.stripe_customer_id;
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: returnUrl
-    });
+    try {
+      const session = await createPortalSession(customerId, returnUrl);
+      return res.status(200).json({ url: session.url });
+    } catch (portalError) {
+      if (portalError.code !== 'resource_missing') {
+        throw portalError;
+      }
 
+      console.warn('Client Stripe introuvable, recherche par courriel:', customerId);
+    }
+
+    const customer = await findCustomerByEmail(userEmail);
+    if (!customer?.id) {
+      return res.status(404).json({
+        code: 'customer_not_found',
+        error: 'Aucun client Stripe actif trouve pour ce courriel'
+      });
+    }
+
+    customerId = customer.id;
+    await saveCustomerId(userId, customerId);
+
+    const session = await createPortalSession(customerId, returnUrl);
     return res.status(200).json({ url: session.url });
   } catch (error) {
     console.error('Erreur portail Stripe:', error);
