@@ -294,12 +294,24 @@ async function savePushToken(token) {
 }
 
 async function ensurePushNotifications(options = {}) {
-  if (!currentUser || pushRegistrationInProgress) return;
-  if (!(await isPushSupported())) return;
+  if (!currentUser) {
+    return { ok: false, message: 'Tu dois être connectée pour activer les rappels.' };
+  }
+  if (pushRegistrationInProgress) {
+    return { ok: false, message: 'Activation déjà en cours. Réessaie dans quelques secondes.' };
+  }
+
+  if (!(await isPushSupported())) {
+    return { ok: false, message: 'Ce navigateur ne supporte pas les notifications push pour cette app. Essaie avec Chrome ou Edge.' };
+  }
 
   const shouldAsk = options.ask === true;
-  if (Notification.permission === 'denied') return;
-  if (Notification.permission === 'default' && !shouldAsk) return;
+  if (Notification.permission === 'denied') {
+    return { ok: false, message: 'Les notifications sont bloquées dans ton navigateur. Il faut les réactiver dans les paramètres du site.' };
+  }
+  if (Notification.permission === 'default' && !shouldAsk) {
+    return { ok: false, message: 'Permission de notification pas encore demandée.' };
+  }
 
   pushRegistrationInProgress = true;
 
@@ -308,7 +320,9 @@ async function ensurePushNotifications(options = {}) {
       ? 'granted'
       : await Notification.requestPermission();
 
-    if (permission !== 'granted') return;
+    if (permission !== 'granted') {
+      return { ok: false, message: 'Permission refusée. Les rappels ne seront pas envoyés sur cet appareil.' };
+    }
 
     initFirebaseAppOnce();
     const registration = await navigator.serviceWorker.register('sw.js?v=39');
@@ -320,6 +334,8 @@ async function ensurePushNotifications(options = {}) {
 
     if (token) {
       await savePushToken(token);
+    } else {
+      return { ok: false, message: 'Firebase n’a pas retourné de jeton de notification.' };
     }
 
     if (!pushForegroundListenerAttached) {
@@ -337,8 +353,11 @@ async function ensurePushNotifications(options = {}) {
       });
       pushForegroundListenerAttached = true;
     }
+
+    return { ok: true, message: 'Rappels activés sur cet appareil.' };
   } catch (e) {
     console.warn('Notifications push non activees:', e);
+    return { ok: false, message: e.message || 'Impossible d’activer les rappels pour le moment.' };
   } finally {
     pushRegistrationInProgress = false;
   }
@@ -1590,6 +1609,16 @@ document.getElementById('upgradeBtn').onclick = () => {
 document.getElementById('manageBillingBtn').onclick = () => {
   document.getElementById('userDropdown').classList.remove('show');
   openCustomerPortal();
+};
+
+document.getElementById('enableNotificationsBtn').onclick = async () => {
+  document.getElementById('userDropdown').classList.remove('show');
+  const result = await ensurePushNotifications({ ask: true });
+  if (result?.ok) {
+    alert('✅ ' + result.message);
+  } else {
+    alert('Notifications : ' + (result?.message || 'Impossible d’activer les rappels.'));
+  }
 };
 
 // Bouton retour sur la page PRO
