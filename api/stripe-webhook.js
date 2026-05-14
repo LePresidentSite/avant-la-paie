@@ -82,6 +82,23 @@ async function getCustomerEmail(customerId, fallbackEmail) {
   }
 }
 
+async function getStoredSubscription(userId) {
+  if (!userId) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('status, stripe_subscription_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Erreur lecture abonnement Supabase:', error.message);
+    return null;
+  }
+
+  return data || null;
+}
+
 async function sendOwnerSms(message) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
@@ -157,6 +174,26 @@ module.exports = async (req, res) => {
             current_period_end: null
           });
 
+          const previousSubscriptionId = session.metadata?.previous_subscription_id;
+          if (previousSubscriptionId) {
+            try {
+              const previousSubscription = await stripe.subscriptions.retrieve(previousSubscriptionId);
+              if (!['canceled', 'incomplete_expired'].includes(previousSubscription.status)) {
+                await stripe.subscriptions.cancel(previousSubscriptionId, {
+                  invoice_now: false,
+                  prorate: false
+                });
+                console.log('Ancien abonnement annule apres acces a vie:', previousSubscriptionId);
+              }
+            } catch (cancelError) {
+              if (cancelError.code === 'resource_missing') {
+                console.log('Ancien abonnement deja absent:', previousSubscriptionId);
+              } else {
+                throw cancelError;
+              }
+            }
+          }
+
           const email = await getCustomerEmail(
             session.customer,
             session.customer_details?.email || session.customer_email
@@ -209,6 +246,12 @@ module.exports = async (req, res) => {
         const userId = getSubscriptionUserId(subscription);
 
         if (userId) {
+          const stored = await getStoredSubscription(userId);
+          if (stored?.status === 'lifetime') {
+            console.log('Mise a jour abonnement ignoree: acces a vie deja actif.');
+            break;
+          }
+
           let status = subscription.status; // 'active', 'trialing', 'past_due', 'canceled'
 
           await updateUserSubscription(userId, {
@@ -224,9 +267,15 @@ module.exports = async (req, res) => {
       // Quand l'abonnement est annulé / expire
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
-        const userId = subscription.metadata?.user_id;
+        const userId = getSubscriptionUserId(subscription);
 
         if (userId) {
+          const stored = await getStoredSubscription(userId);
+          if (stored?.status === 'lifetime') {
+            console.log('Annulation abonnement ignoree: acces a vie deja actif.');
+            break;
+          }
+
           await updateUserSubscription(userId, {
             status: 'canceled'
           });

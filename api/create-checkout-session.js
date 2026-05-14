@@ -13,16 +13,20 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-async function findExistingCustomerId(userId, userEmail) {
+async function findExistingBillingProfile(userId, userEmail) {
   try {
     const { data } = await supabaseAdmin
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('status, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (data?.stripe_customer_id) {
-      return data.stripe_customer_id;
+      return {
+        customerId: data.stripe_customer_id,
+        subscriptionId: data.stripe_subscription_id || null,
+        status: data.status || null
+      };
     }
   } catch (error) {
     console.warn('Recherche client Supabase impossible:', error.message);
@@ -33,7 +37,11 @@ async function findExistingCustomerId(userId, userEmail) {
     limit: 1
   });
 
-  return customers.data[0]?.id || null;
+  return {
+    customerId: customers.data[0]?.id || null,
+    subscriptionId: null,
+    status: null
+  };
 }
 
 module.exports = async (req, res) => {
@@ -80,7 +88,7 @@ module.exports = async (req, res) => {
     const appUrl = 'https://avantlapaie.com';
     const successUrl = `${appUrl}/?paiement=success`;
     const cancelUrl = `${appUrl}/?paiement=annule`;
-    const existingCustomerId = await findExistingCustomerId(userId, userEmail);
+    const billingProfile = await findExistingBillingProfile(userId, userEmail);
 
     // Créer la session Stripe Checkout
     const checkoutParams = {
@@ -95,7 +103,10 @@ module.exports = async (req, res) => {
       metadata: {
         user_id: userId,
         plan: plan,
-        access_type: isLifetime ? 'lifetime' : 'subscription'
+        access_type: isLifetime ? 'lifetime' : 'subscription',
+        previous_subscription_id: isLifetime && billingProfile.subscriptionId
+          ? billingProfile.subscriptionId
+          : ''
       },
       success_url: `${successUrl}&plan=${plan}`,
       cancel_url: cancelUrl,
@@ -112,8 +123,8 @@ module.exports = async (req, res) => {
       };
     }
 
-    if (existingCustomerId) {
-      checkoutParams.customer = existingCustomerId;
+    if (billingProfile.customerId) {
+      checkoutParams.customer = billingProfile.customerId;
     } else {
       checkoutParams.customer_email = userEmail;
       if (isLifetime) {
