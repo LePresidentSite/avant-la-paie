@@ -251,6 +251,29 @@ function hasFirebasePushConfig() {
     && FIREBASE_VAPID_KEY;
 }
 
+function isIOSDevice() {
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalonePWA() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function getUnsupportedPushMessage() {
+  if (isIOSDevice()) {
+    if (!isStandalonePWA()) {
+      return "Sur iPhone, les rappels fonctionnent seulement quand l'app est installee sur l'ecran d'accueil. Ouvre avantlapaie.com dans Safari, touche Partager, puis Ajouter a l'ecran d'accueil.";
+    }
+
+    return "Les rappels ne sont pas disponibles avec ce navigateur sur iPhone. Ouvre l'app depuis son icone sur l'ecran d'accueil.";
+  }
+
+  return 'Ce navigateur ne supporte pas les notifications push pour cette app. Essaie avec Chrome ou Edge.';
+}
+
 async function isPushSupported() {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
   if (typeof firebase === 'undefined' || !firebase.messaging) return false;
@@ -302,7 +325,7 @@ async function ensurePushNotifications(options = {}) {
   }
 
   if (!(await isPushSupported())) {
-    return { ok: false, message: 'Ce navigateur ne supporte pas les notifications push pour cette app. Essaie avec Chrome ou Edge.' };
+    return { ok: false, message: getUnsupportedPushMessage() };
   }
 
   const shouldAsk = options.ask === true;
@@ -357,6 +380,9 @@ async function ensurePushNotifications(options = {}) {
     return { ok: true, message: 'Rappels activés sur cet appareil.' };
   } catch (e) {
     console.warn('Notifications push non activees:', e);
+    if (isIOSDevice() && /push service error|registration failed|not supported|unsupported/i.test(e.message || '')) {
+      return { ok: false, message: getUnsupportedPushMessage() };
+    }
     return { ok: false, message: e.message || 'Impossible d’activer les rappels pour le moment.' };
   } finally {
     pushRegistrationInProgress = false;
