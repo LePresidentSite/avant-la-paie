@@ -816,12 +816,117 @@ function getDateStatusLabel(dateStr) {
   return `en retard ${Math.abs(d)}j`;
 }
 
+function parseLocalDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addMonthsClamped(date, months, anchorDay = date.getDate()) {
+  const d = new Date(date);
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(anchorDay, lastDay));
+  return d;
+}
+
+function addRecurrenceInterval(date, recurrence, anchorDay = date.getDate()) {
+  const d = new Date(date);
+  switch (recurrence) {
+    case 'weekly':
+      d.setDate(d.getDate() + 7);
+      return d;
+    case 'biweekly':
+      d.setDate(d.getDate() + 14);
+      return d;
+    case 'monthly':
+      return addMonthsClamped(d, 1, anchorDay);
+    case 'quarterly':
+      return addMonthsClamped(d, 3, anchorDay);
+    case 'yearly':
+      return addMonthsClamped(d, 12, anchorDay);
+    default:
+      return null;
+  }
+}
+
+function getUpcomingLimitDate() {
+  const limit = new Date();
+  limit.setHours(0, 0, 0, 0);
+  limit.setMonth(limit.getMonth() + 12);
+  return limit;
+}
+
+function buildUpcomingOccurrences(item, type, limitDate) {
+  const start = parseLocalDate(item.date);
+  if (!start) return [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const recurrence = item.recurrence || 'once';
+  const statusDone = type === 'revenu' ? item.received : item.allocated;
+  const base = {
+    ...item,
+    type,
+    sourceId: item.id,
+    originalDate: item.date,
+    emoji: item.emoji || (type === 'revenu' ? '💼' : '💸')
+  };
+
+  if (recurrence === 'once') {
+    if (start > limitDate || statusDone) return [];
+    return [{
+      ...base,
+      date: item.date,
+      days: daysUntil(item.date),
+      isRecurringOccurrence: false
+    }];
+  }
+
+  const occurrences = [];
+  let current = new Date(start);
+  const anchorDay = start.getDate();
+  let guard = 0;
+
+  while (current < today && guard < 500) {
+    const next = addRecurrenceInterval(current, recurrence, anchorDay);
+    if (!next || next <= current) break;
+    current = next;
+    guard++;
+  }
+
+  while (current <= limitDate && guard < 500) {
+    const dateStr = isoDate(current);
+    const isOriginalDate = dateStr === item.date;
+
+    if (!(isOriginalDate && statusDone)) {
+      occurrences.push({
+        ...base,
+        date: dateStr,
+        days: daysUntil(dateStr),
+        isRecurringOccurrence: !isOriginalDate
+      });
+    }
+
+    const next = addRecurrenceInterval(current, recurrence, anchorDay);
+    if (!next || next <= current) break;
+    current = next;
+    guard++;
+  }
+
+  return occurrences;
+}
+
 function getUpcomingPayments() {
-  return state.envelopes
-    .filter(env => env.date && !env.allocated)
-    .map(env => ({ ...env, days: daysUntil(env.date) }))
+  const limitDate = getUpcomingLimitDate();
+  const revenus = state.revenus.flatMap(rev => buildUpcomingOccurrences(rev, 'revenu', limitDate));
+  const envelopes = state.envelopes.flatMap(env => buildUpcomingOccurrences(env, 'envelope', limitDate));
+
+  return [...revenus, ...envelopes]
     .sort((a, b) => {
       if (a.days !== b.days) return a.days - b.days;
+      if (a.type !== b.type) return a.type === 'revenu' ? -1 : 1;
       return String(a.name).localeCompare(String(b.name), 'fr-CA');
     });
 }
@@ -865,10 +970,10 @@ function updateUpcomingButton() {
 
   if (sub) {
     if (upcoming.length === 0) {
-      sub.textContent = 'Ajoute une date à tes enveloppes';
+      sub.textContent = 'Ajoute une date à tes revenus ou dépenses';
     } else {
       const next = upcoming[0];
-      sub.textContent = `${upcoming.length} paiement${upcoming.length > 1 ? 's' : ''} · Prochain : ${next.name} ${getDateStatusLabel(next.date)}`;
+      sub.textContent = `${upcoming.length} élément${upcoming.length > 1 ? 's' : ''} · Prochain : ${next.name} ${getDateStatusLabel(next.date)}`;
     }
   }
 }
@@ -901,15 +1006,19 @@ function renderUpcomingPopup() {
 
   const upcoming = getUpcomingPayments();
   const todayIso = isoDate(new Date());
-  const paymentDates = new Set(upcoming.map(item => item.date));
+  const dateTypes = upcoming.reduce((map, item) => {
+    if (!map[item.date]) map[item.date] = { revenu: false, envelope: false };
+    map[item.date][item.type] = true;
+    return map;
+  }, {});
   const selectedItems = upcoming.filter(item => item.date === selectedUpcomingDate);
   const monthTitle = upcomingMonth.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
 
   if (upcoming.length === 0) {
     list.innerHTML = `
       <div class="upcoming-empty">
-        Aucun paiement à venir avec une date.<br>
-        Ajoute une date à tes enveloppes pour les voir ici.
+        Aucun élément daté à venir.<br>
+        Ajoute une date à tes revenus ou dépenses pour les voir ici.
       </div>
     `;
     return;
@@ -929,13 +1038,25 @@ function renderUpcomingPopup() {
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const d = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), day);
     const dateStr = isoDate(d);
+    const types = dateTypes[dateStr];
+    const dots = types
+      ? `<span class="upcoming-day-dots">
+          ${types.revenu ? '<span class="upcoming-dot income"></span>' : ''}
+          ${types.envelope ? '<span class="upcoming-dot expense"></span>' : ''}
+        </span>`
+      : '<span class="upcoming-day-dots"></span>';
     const classes = [
       'upcoming-cal-day',
-      paymentDates.has(dateStr) ? 'has-payment' : '',
+      types ? 'has-payment' : '',
+      types?.revenu ? 'has-income' : '',
+      types?.envelope ? 'has-expense' : '',
       dateStr === todayIso ? 'today' : '',
       dateStr === selectedUpcomingDate ? 'selected' : ''
     ].filter(Boolean).join(' ');
-    grid += `<button type="button" class="${classes}" data-upcoming-date="${dateStr}">${day}</button>`;
+    grid += `<button type="button" class="${classes}" data-upcoming-date="${dateStr}">
+      <span class="upcoming-day-number">${day}</span>
+      ${dots}
+    </button>`;
   }
 
   const dayTitle = selectedUpcomingDate
@@ -944,7 +1065,7 @@ function renderUpcomingPopup() {
   const dayCount = selectedItems.length;
   const dayList = dayCount > 0
     ? selectedItems.map(item => renderUpcomingItem(item)).join('')
-    : `<div class="upcoming-empty">Aucun paiement prévu cette journée.</div>`;
+    : `<div class="upcoming-empty">Aucun élément prévu cette journée.</div>`;
 
   list.innerHTML = `
     <div class="upcoming-calendar">
@@ -957,7 +1078,7 @@ function renderUpcomingPopup() {
     </div>
     <div class="upcoming-day-title">
       <h4>${escapeHtml(dayTitle)}</h4>
-      <span>${dayCount} paiement${dayCount > 1 ? 's' : ''}</span>
+      <span>${dayCount} élément${dayCount > 1 ? 's' : ''}</span>
     </div>
     ${dayList}
   `;
@@ -967,15 +1088,17 @@ function renderUpcomingItem(item) {
     const rec = item.recurrence && item.recurrence !== 'once'
       ? ` · ${getRecurrenceLabel(item.recurrence).replace('🔁 ', '')}`
       : '';
-    const dateText = `${formatDateShort(item.date)} · ${getDateStatusLabel(item.date)}${rec}`;
+    const typeLabel = item.type === 'revenu' ? 'Revenu' : 'Dépense';
+    const dateText = `${typeLabel} · ${formatDateShort(item.date)} · ${getDateStatusLabel(item.date)}${rec}`;
+    const amountClass = item.type === 'revenu' ? 'income' : 'expense';
     return `
-      <div class="upcoming-item${item.days < 0 ? ' overdue' : ''}">
+      <div class="upcoming-item ${item.type}${item.days < 0 ? ' overdue' : ''}">
       <div class="upcoming-emoji">${item.emoji}</div>
       <div class="upcoming-info">
         <div class="upcoming-name">${escapeHtml(item.name)}</div>
         <div class="upcoming-meta">${escapeHtml(dateText)}</div>
       </div>
-      <div class="upcoming-amount">${fmt(item.amount)}</div>
+      <div class="upcoming-amount ${amountClass}">${fmt(item.amount)}</div>
       </div>
     `;
 }
@@ -1042,17 +1165,8 @@ async function renewCycle() {
 // Avancer une date selon la récurrence
 function advanceDate(dateStr, recurrence) {
   const d = new Date(dateStr + 'T00:00:00');
-  switch (recurrence) {
-    case 'weekly': d.setDate(d.getDate() + 7); break;
-    case 'biweekly': d.setDate(d.getDate() + 14); break;
-    case 'monthly': d.setMonth(d.getMonth() + 1); break;
-    case 'quarterly': d.setMonth(d.getMonth() + 3); break;
-    case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
-  }
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  const next = addRecurrenceInterval(d, recurrence);
+  return next ? isoDate(next) : dateStr;
 }
 
 // Calculer les jours restants de l'essai

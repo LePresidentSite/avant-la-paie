@@ -1053,6 +1053,11 @@
     font-size: 11px;
     cursor: pointer;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 8px;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
   }
   .upcoming-cal-day.empty {
     cursor: default;
@@ -1063,15 +1068,43 @@
     border-color: rgba(255,137,6,0.18);
   }
   .upcoming-cal-day.has-payment::after {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
+    content: none;
+    display: none;
+  }
+  .upcoming-cal-day.has-income {
+    border-color: rgba(47, 213, 128, 0.18);
+  }
+  .upcoming-cal-day.has-expense {
+    border-color: rgba(255,137,6,0.18);
+  }
+  .upcoming-day-number {
+    line-height: 1;
+  }
+  .upcoming-day-dots {
     position: absolute;
     left: 50%;
     bottom: 5px;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 5px;
+    pointer-events: none;
+  }
+  .upcoming-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    display: block;
+  }
+  .upcoming-dot.income {
+    background: var(--good);
+    box-shadow: 0 0 8px rgba(47, 213, 128, 0.55);
+  }
+  .upcoming-dot.expense {
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(255, 137, 6, 0.55);
   }
   .upcoming-cal-day.today {
     border-color: rgba(255,255,254,0.28);
@@ -1083,7 +1116,16 @@
     font-weight: 700;
   }
   .upcoming-cal-day.selected::after {
-    background: var(--bg);
+    content: none;
+    display: none;
+  }
+  .upcoming-cal-day.selected .upcoming-dot.income {
+    background: #08351d;
+    box-shadow: none;
+  }
+  .upcoming-cal-day.selected .upcoming-dot.expense {
+    background: #3d2108;
+    box-shadow: none;
   }
   .upcoming-day-title {
     display: flex;
@@ -1149,6 +1191,12 @@
     font-weight: 600;
     color: var(--accent);
     white-space: nowrap;
+  }
+  .upcoming-amount.income {
+    color: var(--good);
+  }
+  .upcoming-amount.expense {
+    color: var(--accent);
   }
   .upcoming-empty {
     padding: 26px 18px;
@@ -2085,7 +2133,7 @@
 <div class="upcoming-overlay" id="upcomingOverlay">
   <div class="upcoming-popup">
     <div class="upcoming-head">
-      <h3>Paiements à venir</h3>
+      <h3>Calendrier préventif</h3>
       <button class="upcoming-close" id="upcomingClose" aria-label="Fermer">×</button>
     </div>
     <div class="upcoming-list" id="upcomingList"></div>
