@@ -962,6 +962,39 @@ function selectFirstUpcomingDateInVisibleMonth() {
     : isoDate(new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), 1));
 }
 
+function upcomingItemKey(item) {
+  return `${item.type}:${item.sourceId || item.id}:${item.date}`;
+}
+
+function getSelectedDateList(upcoming, selectedDate, minCount = 3) {
+  const selectedTime = parseLocalDate(selectedDate)?.getTime() || 0;
+  const exactItems = upcoming.filter(item => item.date === selectedDate);
+  const used = new Set(exactItems.map(upcomingItemKey));
+  const targetCount = Math.max(minCount, exactItems.length);
+  const list = [...exactItems];
+
+  const fillFrom = candidates => {
+    for (const item of candidates) {
+      if (list.length >= targetCount) break;
+      const key = upcomingItemKey(item);
+      if (used.has(key)) continue;
+      used.add(key);
+      list.push(item);
+    }
+  };
+
+  fillFrom(upcoming.filter(item => {
+    const itemTime = parseLocalDate(item.date)?.getTime() || 0;
+    return item.date !== selectedDate && itemTime >= selectedTime;
+  }));
+
+  if (list.length < targetCount) {
+    fillFrom(upcoming.filter(item => item.date !== selectedDate));
+  }
+
+  return list;
+}
+
 function updateUpcomingButton() {
   const btn = document.getElementById('upcomingBtn');
   const sub = document.getElementById('upcomingCardSub');
@@ -1012,6 +1045,7 @@ function renderUpcomingPopup() {
     return map;
   }, {});
   const selectedItems = upcoming.filter(item => item.date === selectedUpcomingDate);
+  const displayedItems = getSelectedDateList(upcoming, selectedUpcomingDate, 3);
   const monthTitle = upcomingMonth.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
 
   if (upcoming.length === 0) {
@@ -1063,9 +1097,18 @@ function renderUpcomingPopup() {
     ? formatDateLong(selectedUpcomingDate)
     : 'Sélectionne une date';
   const dayCount = selectedItems.length;
-  const dayList = dayCount > 0
-    ? selectedItems.map(item => renderUpcomingItem(item)).join('')
-    : `<div class="upcoming-empty">Aucun élément prévu cette journée.</div>`;
+  const extraCount = Math.max(0, displayedItems.length - dayCount);
+  const dayCountText = dayCount > 0
+    ? `${dayCount} ce jour${extraCount > 0 ? ` · ${extraCount} à venir` : ''}`
+    : `${displayedItems.length} prochain${displayedItems.length > 1 ? 's' : ''}`;
+  const dayListIntro = dayCount === 0
+    ? `<div class="upcoming-empty compact">Rien de prévu cette journée. Voici les prochains éléments à venir.</div>`
+    : extraCount > 0
+      ? `<div class="upcoming-empty compact">Et juste après, pour garder une vue d'ensemble.</div>`
+      : '';
+  const dayList = displayedItems.length > 0
+    ? `${dayListIntro}${displayedItems.map(item => renderUpcomingItem(item)).join('')}`
+    : `<div class="upcoming-empty">Aucun élément prévu pour le moment.</div>`;
 
   list.innerHTML = `
     <div class="upcoming-calendar">
@@ -1078,7 +1121,7 @@ function renderUpcomingPopup() {
     </div>
     <div class="upcoming-day-title">
       <h4>${escapeHtml(dayTitle)}</h4>
-      <span>${dayCount} élément${dayCount > 1 ? 's' : ''}</span>
+      <span>${escapeHtml(dayCountText)}</span>
     </div>
     ${dayList}
   `;
