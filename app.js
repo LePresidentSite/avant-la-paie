@@ -39,23 +39,75 @@ const PRESETS_REV = [
 const EMOJIS_ENV = ['🏠','🛒','⚡','💧','📱','🌐','🚗','⛽','💊','🏥','🎉','☕','💰','🎁','👶','🐾','📚','👕','🎮','✈️','🍕','🧾'];
 const EMOJIS_REV = ['💼','💵','💰','🏛️','📊','🤝','💸','🎯','🎁','📈','🏖️','👶','📱','🏠','🎨','✨','💎','🪙'];
 
+const PRESETS_SAVE = [
+  { emoji: '🛟', name: 'Sécurité' },
+  { emoji: '✈️', name: 'Voyage' },
+  { emoji: '🛋️', name: 'Sofa' },
+  { emoji: '🎄', name: 'Noël' },
+  { emoji: '🚗', name: 'Auto' },
+  { emoji: '🏠', name: 'Maison' },
+  { emoji: '🦷', name: 'Dentiste' },
+  { emoji: '🎓', name: 'Études' },
+  { emoji: '✨', name: 'Projet perso' }
+];
+
+const EMOJIS_SAVE = ['🛟','💛','✨','✈️','🛋️','🎄','🚗','🏠','🦷','🎓','💰','🌱','🎁','💎','☂️','🔒','🧘','🧡'];
+
 // État global
 let currentUser = null;
 let currentSubscription = null;
+const STRIPE_PORTAL_LOGIN_URL = 'https://billing.stripe.com/p/login/14A5kE7C9fmoduWb5veQM00';
+const FREE_LIMITS = {
+  revenus: 1,
+  envelopes: 5
+};
 let state = {
   revenus: [],
-  envelopes: []
+  envelopes: [],
+  savings: []
 };
 
 let editing = { type: null, id: null };
 let selectedEmoji = '💼';
 let selectedRecurrence = 'once';
+let upcomingMonth = new Date();
+upcomingMonth.setDate(1);
+let selectedUpcomingDate = null;
+let pushRegistrationInProgress = false;
+let pushForegroundListenerAttached = false;
 
 // ============================================================
 // GESTION DES ÉCRANS
 // ============================================================
+function trackVirtualPage(screenId) {
+  if (typeof gtag !== 'function') return;
+
+  const pages = {
+    welcomeScreen: { slug: 'accueil', title: 'Accueil' },
+    signupScreen: { slug: 'inscription', title: 'Inscription' },
+    loginScreen: { slug: 'connexion', title: 'Connexion' },
+    proScreen: { slug: 'pro', title: 'Passer à PRO' },
+    billingScreen: { slug: 'facturation', title: 'Facturation et abonnement' },
+    main: { slug: 'application', title: 'Application' }
+  };
+
+  const page = pages[screenId];
+  if (!page) return;
+
+  const basePath = window.location.pathname.endsWith('/')
+    ? window.location.pathname
+    : window.location.pathname.replace(/\/[^/]*$/, '/');
+  const pagePath = `${basePath}${page.slug}`;
+
+  gtag('event', 'page_view', {
+    page_title: `Avant la Paie - ${page.title}`,
+    page_location: `${window.location.origin}${pagePath}`,
+    page_path: pagePath
+  });
+}
+
 function showScreen(screenId) {
-  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen'].forEach(id => {
+  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen', 'billingScreen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -66,6 +118,8 @@ function showScreen(screenId) {
   } else {
     document.getElementById(screenId).style.display = 'flex';
   }
+
+  trackVirtualPage(screenId);
 }
 
 // ============================================================
@@ -82,6 +136,7 @@ async function checkAuth() {
       await loadUserData();
       showScreen('main');
       render();
+      ensurePushNotifications({ ask: false });
       // Vérifier si retour de paiement
       checkPaymentReturn();
     } else {
@@ -117,6 +172,7 @@ async function loadSubscription() {
 function checkPaymentReturn() {
   const urlParams = new URLSearchParams(window.location.search);
   const paiement = urlParams.get('paiement');
+  const plan = urlParams.get('plan');
 
   if (paiement === 'success') {
     // Nettoyer l'URL
@@ -125,7 +181,10 @@ function checkPaymentReturn() {
     setTimeout(async () => {
       await loadSubscription();
       render();
-      alert('🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux annuler à tout moment.');
+      const message = plan === 'lifetime'
+        ? '🎉 Bienvenue dans PRO!\n\nTon accès à vie est activé. Même accès que PRO, sans date d’expiration.'
+        : '🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.';
+      alert(message);
     }, 2000);
   } else if (paiement === 'annule') {
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -136,11 +195,208 @@ function checkPaymentReturn() {
 function isProUser() {
   if (!currentSubscription) return false;
   const status = currentSubscription.status;
-  return status === 'active' || status === 'trialing';
+  if (status === 'lifetime') return true;
+  if (status === 'active') return true;
+  if (status !== 'trialing') return false;
+
+  if (!currentSubscription.current_period_end) return true;
+  return new Date(currentSubscription.current_period_end) > new Date();
+}
+
+function getStripeTrialDaysLeft() {
+  if (!currentSubscription || currentSubscription.status !== 'trialing' || !currentSubscription.current_period_end) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((new Date(currentSubscription.current_period_end) - new Date()) / 86400000));
+}
+
+function showProPrompt(title, message) {
+  alert(`${title}\n\n${message}\n\nPRO débloque les revenus illimités, les enveloppes illimitées, les récurrences et le calendrier complet.`);
+  const modal = document.getElementById('modal');
+  if (modal) modal.classList.remove('show');
+  const dropdown = document.getElementById('userDropdown');
+  if (dropdown) dropdown.classList.remove('show');
+  showScreen('proScreen');
+}
+
+function canCreateRevenu() {
+  if (isProUser()) return true;
+  if (state.revenus.length < FREE_LIMITS.revenus) return true;
+  showProPrompt(
+    'Limite gratuite atteinte',
+    `Le plan gratuit permet ${FREE_LIMITS.revenus} source de revenu. Passe à PRO pour ajouter plusieurs revenus.`
+  );
+  return false;
+}
+
+function canCreateEnvelope() {
+  if (isProUser()) return true;
+  if (state.envelopes.length < FREE_LIMITS.envelopes) return true;
+  showProPrompt(
+    'Limite gratuite atteinte',
+    `Le plan gratuit permet ${FREE_LIMITS.envelopes} enveloppes de dépenses. Passe à PRO pour en ajouter autant que nécessaire.`
+  );
+  return false;
+}
+
+function canUseProFeature(featureName) {
+  if (isProUser()) return true;
+  showProPrompt('Fonction PRO', `${featureName} fait partie de la version PRO.`);
+  return false;
+}
+
+// ============================================================
+// NOTIFICATIONS PUSH (Firebase Cloud Messaging)
+// ============================================================
+
+function hasFirebasePushConfig() {
+  return typeof FIREBASE_CONFIG !== 'undefined'
+    && FIREBASE_CONFIG
+    && FIREBASE_CONFIG.apiKey
+    && typeof FIREBASE_VAPID_KEY !== 'undefined'
+    && FIREBASE_VAPID_KEY;
+}
+
+function isIOSDevice() {
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalonePWA() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function getUnsupportedPushMessage() {
+  if (isIOSDevice()) {
+    if (!isStandalonePWA()) {
+      return "Sur iPhone, les rappels fonctionnent seulement quand l'app est installee sur l'ecran d'accueil. Ouvre avantlapaie.com dans Safari, touche Partager, puis Ajouter a l'ecran d'accueil.";
+    }
+
+    return "Les rappels ne sont pas disponibles avec ce navigateur sur iPhone. Ouvre l'app depuis son icone sur l'ecran d'accueil.";
+  }
+
+  return 'Ce navigateur ne supporte pas les notifications push pour cette app. Essaie avec Chrome ou Edge.';
+}
+
+async function isPushSupported() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return false;
+  if (typeof firebase === 'undefined' || !firebase.messaging) return false;
+  if (!hasFirebasePushConfig()) return false;
+
+  try {
+    if (typeof firebase.messaging.isSupported === 'function') {
+      return await firebase.messaging.isSupported();
+    }
+  } catch (e) {
+    console.warn('Notifications push non supportees:', e);
+    return false;
+  }
+
+  return true;
+}
+
+function initFirebaseAppOnce() {
+  if (!firebase.apps || !firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  }
+}
+
+async function savePushToken(token) {
+  if (!currentUser || !token) return;
+
+  const { error } = await supabaseClient
+    .from('push_tokens')
+    .upsert({
+      user_id: currentUser.id,
+      email: currentUser.email || null,
+      token,
+      platform: 'web',
+      enabled: true,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'token'
+    });
+
+  if (error) throw error;
+}
+
+async function ensurePushNotifications(options = {}) {
+  if (!currentUser) {
+    return { ok: false, message: 'Tu dois être connectée pour activer les rappels.' };
+  }
+  if (pushRegistrationInProgress) {
+    return { ok: false, message: 'Activation déjà en cours. Réessaie dans quelques secondes.' };
+  }
+
+  if (!(await isPushSupported())) {
+    return { ok: false, message: getUnsupportedPushMessage() };
+  }
+
+  const shouldAsk = options.ask === true;
+  if (Notification.permission === 'denied') {
+    return { ok: false, message: 'Les notifications sont bloquées dans ton navigateur. Il faut les réactiver dans les paramètres du site.' };
+  }
+  if (Notification.permission === 'default' && !shouldAsk) {
+    return { ok: false, message: 'Permission de notification pas encore demandée.' };
+  }
+
+  pushRegistrationInProgress = true;
+
+  try {
+    const permission = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      return { ok: false, message: 'Permission refusée. Les rappels ne seront pas envoyés sur cet appareil.' };
+    }
+
+    initFirebaseAppOnce();
+    const registration = await navigator.serviceWorker.register('sw.js?v=41');
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({
+      vapidKey: FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration
+    });
+
+    if (token) {
+      await savePushToken(token);
+    } else {
+      return { ok: false, message: 'Firebase n’a pas retourné de jeton de notification.' };
+    }
+
+    if (!pushForegroundListenerAttached) {
+      messaging.onMessage(payload => {
+        const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
+        const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
+
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png'
+          });
+        }
+      });
+      pushForegroundListenerAttached = true;
+    }
+
+    return { ok: true, message: 'Rappels activés sur cet appareil.' };
+  } catch (e) {
+    console.warn('Notifications push non activees:', e);
+    if (isIOSDevice() && /push service error|registration failed|not supported|unsupported/i.test(e.message || '')) {
+      return { ok: false, message: getUnsupportedPushMessage() };
+    }
+    return { ok: false, message: e.message || 'Impossible d’activer les rappels pour le moment.' };
+  } finally {
+    pushRegistrationInProgress = false;
+  }
 }
 
 // Inscription
-async function signUp(email, password) {
+async function signUp(email, password, passwordConfirm) {
   const errorEl = document.getElementById('signupError');
   const successEl = document.getElementById('signupSuccess');
   const btn = document.getElementById('signupSubmitBtn');
@@ -148,8 +404,13 @@ async function signUp(email, password) {
   errorEl.classList.remove('show');
   successEl.classList.remove('show');
 
-  if (!email || !password) {
+  if (!email || !password || !passwordConfirm) {
     errorEl.textContent = 'Remplis tous les champs';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (password !== passwordConfirm) {
+    errorEl.textContent = 'Les deux mots de passe ne sont pas identiques';
     errorEl.classList.add('show');
     return;
   }
@@ -195,6 +456,7 @@ async function signUp(email, password) {
         await loadUserData();
         showScreen('main');
         render();
+        ensurePushNotifications({ ask: true });
       } else {
         // Confirmation par email activée
         successEl.textContent = '✓ Compte créé! Vérifie ton courriel pour confirmer.';
@@ -245,6 +507,7 @@ async function signIn(email, password) {
     await loadUserData();
     showScreen('main');
     render();
+    ensurePushNotifications({ ask: true });
     btn.disabled = false;
     btn.textContent = 'Se connecter';
   } catch (e) {
@@ -260,7 +523,7 @@ async function signOut() {
   await supabaseClient.auth.signOut();
   currentUser = null;
   currentSubscription = null;
-  state = { revenus: [], envelopes: [] };
+  state = { revenus: [], envelopes: [], savings: [] };
   showScreen('welcomeScreen');
 }
 
@@ -323,10 +586,31 @@ async function loadUserData() {
         emoji: e.emoji,
         name: e.name,
         amount: parseFloat(e.amount),
+        target_amount: e.target_amount !== null && e.target_amount !== undefined ? parseFloat(e.target_amount) : null,
         allocated: e.allocated,
         date: e.date || '',
         recurrence: e.recurrence || 'once'
       }));
+    }
+
+    // Charger mises de côté
+    const { data: saves, error: saveErr } = await supabaseClient
+      .from('savings')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+
+    if (!saveErr && saves) {
+      state.savings = saves.map(s => ({
+        id: s.id,
+        emoji: s.emoji || '💛',
+        name: s.name,
+        amount: parseFloat(s.amount) || 0,
+        target_amount: s.target_amount !== null && s.target_amount !== undefined ? parseFloat(s.target_amount) : null,
+        date: s.date || ''
+      }));
+    } else {
+      state.savings = [];
     }
   } catch (e) {
     console.error('Erreur chargement données:', e);
@@ -397,8 +681,9 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
-          allocated: env.allocated || false,
+          target_amount: env.target_amount || null,
           date: env.date || null,
+          allocated: env.allocated || false,
           recurrence: env.recurrence || 'once'
         })
         .select()
@@ -412,8 +697,9 @@ async function saveEnvelope(env, isNew) {
           emoji: env.emoji,
           name: env.name,
           amount: env.amount,
-          allocated: env.allocated,
+          target_amount: env.target_amount || null,
           date: env.date || null,
+          allocated: env.allocated,
           recurrence: env.recurrence || 'once'
         })
         .eq('id', env.id)
@@ -434,6 +720,59 @@ async function deleteEnvelope(id) {
     await supabaseClient.from('envelopes').delete().eq('id', id).eq('user_id', currentUser.id);
   } catch (e) {
     console.error('Erreur suppression enveloppe:', e);
+  }
+}
+
+// Sauvegarder une mise de côté
+async function saveSaving(saving, isNew) {
+  if (!currentUser) return null;
+  try {
+    const payload = {
+      user_id: currentUser.id,
+      emoji: saving.emoji || '💛',
+      name: saving.name,
+      amount: saving.amount || 0,
+      target_amount: saving.target_amount || null,
+      date: saving.date || null
+    };
+
+    if (isNew) {
+      const { data, error } = await supabaseClient
+        .from('savings')
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { error } = await supabaseClient
+        .from('savings')
+        .update({
+          emoji: payload.emoji,
+          name: payload.name,
+          amount: payload.amount,
+          target_amount: payload.target_amount,
+          date: payload.date,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saving.id)
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return saving;
+    }
+  } catch (e) {
+    console.error('Erreur sauvegarde mise de côté:', e);
+    alert('Erreur de sauvegarde : ' + e.message);
+    return null;
+  }
+}
+
+async function deleteSaving(id) {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('savings').delete().eq('id', id).eq('user_id', currentUser.id);
+  } catch (e) {
+    console.error('Erreur suppression mise de côté:', e);
   }
 }
 
@@ -468,6 +807,179 @@ function daysUntil(dStr) {
   return Math.round((target - now) / 86400000);
 }
 
+function getDateStatusLabel(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return '';
+  if (d === 0) return "aujourd'hui";
+  if (d === 1) return 'demain';
+  if (d > 1) return `dans ${d}j`;
+  return `en retard ${Math.abs(d)}j`;
+}
+
+function getUpcomingPayments() {
+  return state.envelopes
+    .filter(env => env.date && !env.allocated)
+    .map(env => ({ ...env, days: daysUntil(env.date) }))
+    .sort((a, b) => {
+      if (a.days !== b.days) return a.days - b.days;
+      return String(a.name).localeCompare(String(b.name), 'fr-CA');
+    });
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateLong(dStr) {
+  if (!dStr) return '';
+  const d = new Date(dStr + 'T00:00:00');
+  return d.toLocaleDateString('fr-CA', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+}
+
+function sameMonth(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function selectFirstUpcomingDateInVisibleMonth() {
+  const match = getUpcomingPayments().find(item => {
+    const itemDate = new Date(item.date + 'T00:00:00');
+    return sameMonth(itemDate, upcomingMonth);
+  });
+  selectedUpcomingDate = match
+    ? match.date
+    : isoDate(new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), 1));
+}
+
+function updateUpcomingButton() {
+  const btn = document.getElementById('upcomingBtn');
+  const sub = document.getElementById('upcomingCardSub');
+  if (!btn) return;
+  const upcoming = getUpcomingPayments();
+
+  if (sub) {
+    if (upcoming.length === 0) {
+      sub.textContent = 'Ajoute une date à tes enveloppes';
+    } else {
+      const next = upcoming[0];
+      sub.textContent = `${upcoming.length} paiement${upcoming.length > 1 ? 's' : ''} · Prochain : ${next.name} ${getDateStatusLabel(next.date)}`;
+    }
+  }
+}
+
+function openUpcomingPopup() {
+  const upcoming = getUpcomingPayments();
+  if (upcoming.length > 0) {
+    const firstDate = selectedUpcomingDate || upcoming[0].date;
+    selectedUpcomingDate = firstDate;
+    upcomingMonth = new Date(firstDate + 'T00:00:00');
+    upcomingMonth.setDate(1);
+  } else {
+    selectedUpcomingDate = isoDate(new Date());
+    upcomingMonth = new Date();
+    upcomingMonth.setDate(1);
+  }
+  renderUpcomingPopup();
+  const overlay = document.getElementById('upcomingOverlay');
+  if (overlay) overlay.classList.add('show');
+}
+
+function closeUpcomingPopup() {
+  const overlay = document.getElementById('upcomingOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+function renderUpcomingPopup() {
+  const list = document.getElementById('upcomingList');
+  if (!list) return;
+
+  const upcoming = getUpcomingPayments();
+  const todayIso = isoDate(new Date());
+  const paymentDates = new Set(upcoming.map(item => item.date));
+  const selectedItems = upcoming.filter(item => item.date === selectedUpcomingDate);
+  const monthTitle = upcomingMonth.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+
+  if (upcoming.length === 0) {
+    list.innerHTML = `
+      <div class="upcoming-empty">
+        Aucun paiement à venir avec une date.<br>
+        Ajoute une date à tes enveloppes pour les voir ici.
+      </div>
+    `;
+    return;
+  }
+
+  const firstDay = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), 1);
+  const lastDay = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth() + 1, 0);
+  const startOffset = firstDay.getDay(); // dimanche = 0
+  const weekdays = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+  let grid = weekdays.map(day => `<div class="upcoming-cal-weekday">${day}</div>`).join('');
+
+  for (let i = 0; i < startOffset; i++) {
+    grid += `<button type="button" class="upcoming-cal-day empty" tabindex="-1"></button>`;
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const d = new Date(upcomingMonth.getFullYear(), upcomingMonth.getMonth(), day);
+    const dateStr = isoDate(d);
+    const classes = [
+      'upcoming-cal-day',
+      paymentDates.has(dateStr) ? 'has-payment' : '',
+      dateStr === todayIso ? 'today' : '',
+      dateStr === selectedUpcomingDate ? 'selected' : ''
+    ].filter(Boolean).join(' ');
+    grid += `<button type="button" class="${classes}" data-upcoming-date="${dateStr}">${day}</button>`;
+  }
+
+  const dayTitle = selectedUpcomingDate
+    ? formatDateLong(selectedUpcomingDate)
+    : 'Sélectionne une date';
+  const dayCount = selectedItems.length;
+  const dayList = dayCount > 0
+    ? selectedItems.map(item => renderUpcomingItem(item)).join('')
+    : `<div class="upcoming-empty">Aucun paiement prévu cette journée.</div>`;
+
+  list.innerHTML = `
+    <div class="upcoming-calendar">
+      <div class="upcoming-cal-nav">
+        <button type="button" class="upcoming-cal-btn" data-action="upcoming-prev" aria-label="Mois précédent">‹</button>
+        <div class="upcoming-cal-title">${escapeHtml(monthTitle)}</div>
+        <button type="button" class="upcoming-cal-btn" data-action="upcoming-next" aria-label="Mois suivant">›</button>
+      </div>
+      <div class="upcoming-cal-grid">${grid}</div>
+    </div>
+    <div class="upcoming-day-title">
+      <h4>${escapeHtml(dayTitle)}</h4>
+      <span>${dayCount} paiement${dayCount > 1 ? 's' : ''}</span>
+    </div>
+    ${dayList}
+  `;
+}
+
+function renderUpcomingItem(item) {
+    const rec = item.recurrence && item.recurrence !== 'once'
+      ? ` · ${getRecurrenceLabel(item.recurrence).replace('🔁 ', '')}`
+      : '';
+    const dateText = `${formatDateShort(item.date)} · ${getDateStatusLabel(item.date)}${rec}`;
+    return `
+      <div class="upcoming-item${item.days < 0 ? ' overdue' : ''}">
+      <div class="upcoming-emoji">${item.emoji}</div>
+      <div class="upcoming-info">
+        <div class="upcoming-name">${escapeHtml(item.name)}</div>
+        <div class="upcoming-meta">${escapeHtml(dateText)}</div>
+      </div>
+      <div class="upcoming-amount">${fmt(item.amount)}</div>
+      </div>
+    `;
+}
+
 // Étiquettes des récurrences
 function getRecurrenceLabel(rec) {
   switch (rec) {
@@ -489,7 +1001,9 @@ function countRecurrent() {
 
 // Renouveler un cycle: décocher reçus/déposés ET avancer les dates
 async function renewCycle() {
-  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
+  if (!canUseProFeature('Le nouveau cycle automatique')) return;
+
+  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus et dépenses récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
 
   const btn = document.getElementById('newCycleBtn');
   btn.disabled = true;
@@ -510,6 +1024,9 @@ async function renewCycle() {
     for (const e of state.envelopes) {
       if (e.recurrence && e.recurrence !== 'once') {
         e.allocated = false;
+        if (e.date) {
+          e.date = advanceDate(e.date, e.recurrence);
+        }
         await saveEnvelope(e, false);
       }
     }
@@ -557,6 +1074,7 @@ function render() {
   const today = new Date();
   document.getElementById('todayDate').textContent =
     today.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+  updateUpcomingButton();
 
   // Barre "Nouveau cycle" si éléments récurrents
   const recCount = countRecurrent();
@@ -581,37 +1099,46 @@ function render() {
     // Statut PRO vs Essai
     const planEl = document.getElementById('userPlan');
     const upgradeBtn = document.getElementById('upgradeBtn');
+    const manageBillingBtn = document.getElementById('manageBillingBtn');
 
     if (currentSubscription) {
       const status = currentSubscription.status;
-      if (status === 'trialing') {
-        const periodEnd = currentSubscription.current_period_end;
-        if (periodEnd) {
-          const daysLeft = Math.ceil((new Date(periodEnd) - new Date()) / 86400000);
-          planEl.textContent = daysLeft > 0 ? `⏳ Essai PRO · ${daysLeft}j restants` : '✨ PRO actif';
-        } else {
-          planEl.textContent = '⏳ Essai PRO actif';
-        }
+      const stripeTrialDaysLeft = getStripeTrialDaysLeft();
+      if (status === 'lifetime') {
+        planEl.textContent = '✨ Accès à vie actif';
+        planEl.style.color = 'var(--good)';
         upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
+      } else if (status === 'trialing' && isProUser()) {
+        planEl.textContent = stripeTrialDaysLeft !== null
+          ? `⏳ Essai PRO · ${stripeTrialDaysLeft}j restants`
+          : '⏳ Essai PRO actif';
+        planEl.style.color = 'var(--accent)';
+        upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       } else if (status === 'active') {
         planEl.textContent = '✨ PRO actif';
         planEl.style.color = 'var(--good)';
         upgradeBtn.style.display = 'none';
+        manageBillingBtn.style.display = 'block';
       } else if (status === 'past_due') {
         planEl.textContent = '⚠️ Paiement en attente';
         planEl.style.color = 'var(--warn)';
         upgradeBtn.style.display = 'block';
+        manageBillingBtn.style.display = 'block';
       } else {
         // canceled, etc
-        const daysLeft = getTrialDaysLeft();
-        planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+        planEl.textContent = 'Plan gratuit';
+        planEl.style.color = 'var(--ink-soft)';
         upgradeBtn.style.display = 'block';
+        manageBillingBtn.style.display = 'block';
       }
     } else {
-      // Pas d'abonnement = en essai gratuit (calculé depuis la date d'inscription)
-      const daysLeft = getTrialDaysLeft();
-      planEl.textContent = daysLeft > 0 ? `⏳ Essai · ${daysLeft}j restants` : '⚠️ Essai terminé';
+      // Pas d'abonnement = plan gratuit permanent avec limites douces.
+      planEl.textContent = 'Plan gratuit';
+      planEl.style.color = 'var(--ink-soft)';
       upgradeBtn.style.display = 'block';
+      manageBillingBtn.style.display = 'block';
     }
   }
 
@@ -681,7 +1208,9 @@ function render() {
 
   // Reste à allouer
   const totalAlloc = state.envelopes.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
-  const remain = totalRevenus - totalAlloc;
+  const totalSavings = state.savings.reduce((s,item) => s + (parseFloat(item.amount)||0), 0);
+  const totalReserved = totalAlloc + totalSavings;
+  const remain = totalRevenus - totalReserved;
 
   const amountEl = document.getElementById('remainingAmount');
   const subEl = document.getElementById('remainingSub');
@@ -692,7 +1221,7 @@ function render() {
     subEl.textContent = 'Commence par ajouter tes revenus ci-dessus';
   } else if (remain < 0) {
     amountEl.classList.add('over');
-    subEl.textContent = `Tu dépasses tes revenus de ${fmt(-remain)} — réduis une enveloppe`;
+    subEl.textContent = `Tu dépasses tes revenus de ${fmt(-remain)} — réduis une enveloppe ou ton Fonds bonheur`;
   } else if (remain === 0) {
     amountEl.classList.add('good');
     subEl.textContent = 'Chaque dollar a une mission. Bravo. 🎯';
@@ -704,8 +1233,59 @@ function render() {
     subEl.textContent = 'Continue à répartir avant que la paie arrive';
   }
 
-  const pct = totalRevenus > 0 ? Math.min(100, (totalAlloc / totalRevenus) * 100) : 0;
+  const pct = totalRevenus > 0 ? Math.min(100, (totalReserved / totalRevenus) * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
+
+  // Fonds bonheur
+  const savingsBox = document.getElementById('savingsList');
+  savingsBox.innerHTML = '';
+  document.getElementById('savingsCount').textContent = `${fmt(totalSavings)} réservé`;
+
+  if (state.savings.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:18px;text-align:center;color:var(--ink-soft);font-style:italic;font-size:13px;';
+    empty.textContent = 'Aucun fonds bonheur encore.';
+    savingsBox.appendChild(empty);
+  } else {
+    state.savings.forEach(item => {
+      const target = parseFloat(item.target_amount) || 0;
+      const savedAmount = parseFloat(item.amount) || 0;
+      const pctSaved = target > 0 ? Math.min(100, (savedAmount / target) * 100) : 0;
+      const savedPercent = Math.round(pctSaved);
+      let when = '';
+      if (item.date) {
+        const d = daysUntil(item.date);
+        if (d === 0) when = `<span class="when">aujourd'hui</span>`;
+        else if (d === 1) when = `<span class="when">demain</span>`;
+        else if (d > 1) when = `<span class="when">dans ${d}j</span>`;
+        else when = `<span class="when">${formatDateShort(item.date)}</span>`;
+      }
+      const progress = target > 0
+        ? `
+          <div class="item-progress-meta">
+            <span>${savedPercent} %</span>
+            <span>${fmt(savedAmount)} / ${fmt(target)}</span>
+          </div>
+          <div class="item-progress"><div style="width:${pctSaved}%"></div></div>
+        `
+        : '';
+      const goalText = target > 0 ? `<span> / ${fmt(target)}</span>` : '';
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="item-emoji">${item.emoji || '💛'}</div>
+        <div class="item-info">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <div class="item-amount"><strong class="saving">${fmt(savedAmount)}</strong>${goalText}${when}</div>
+          ${progress}
+        </div>
+        <div class="item-actions">
+          <button class="icon-btn" data-save-edit="${item.id}">✎</button>
+        </div>
+      `;
+      savingsBox.appendChild(div);
+    });
+  }
 
   // Enveloppes
   const envBox = document.getElementById('envelopesList');
@@ -720,13 +1300,35 @@ function render() {
     state.envelopes.forEach(env => {
       const recBadge = (env.recurrence && env.recurrence !== 'once')
         ? `<span class="rec-badge">${getRecurrenceLabel(env.recurrence)}</span>` : '';
+      const allocatedAmount = parseFloat(env.amount) || 0;
+      const targetAmount = parseFloat(env.target_amount) || allocatedAmount;
+      const pctEnv = targetAmount > 0 ? Math.min(100, (allocatedAmount / targetAmount) * 100) : 0;
+      const pctEnvLabel = Math.round(pctEnv);
+      const progress = targetAmount > 0
+        ? `
+          <div class="item-progress-meta">
+            <span>${pctEnvLabel} %</span>
+            <span>${fmt(allocatedAmount)} / ${fmt(targetAmount)}</span>
+          </div>
+          <div class="item-progress"><div style="width:${pctEnv}%"></div></div>
+        `
+        : '';
+      let when = '';
+      if (env.date) {
+        const d = daysUntil(env.date);
+        if (d === 0) when = `<span class="when">aujourd'hui</span>`;
+        else if (d === 1) when = `<span class="when">demain</span>`;
+        else if (d > 1) when = `<span class="when">dans ${d}j</span>`;
+        else when = `<span class="when">en retard ${Math.abs(d)}j</span>`;
+      }
       const div = document.createElement('div');
       div.className = 'item' + (env.allocated ? ' allocated' : '');
       div.innerHTML = `
         <div class="item-emoji">${env.emoji}</div>
         <div class="item-info">
           <div class="item-name">${escapeHtml(env.name)}${recBadge}</div>
-          <div class="item-amount">${fmt(env.amount)}</div>
+          <div class="item-amount">${fmt(env.amount)}${when}</div>
+          ${progress}
         </div>
         <div class="item-actions">
           <button class="icon-btn check ${env.allocated?'on':''}" data-env-toggle="${env.id}">${env.allocated?'✓':'○'}</button>
@@ -746,34 +1348,59 @@ function render() {
 // MODAL D'ÉDITION
 // ============================================================
 function openModal(type, item = null) {
+  if (!item) {
+    if (type === 'revenu' && !canCreateRevenu()) return;
+    if (type === 'envelope' && !canCreateEnvelope()) return;
+  }
+
   editing = { type, id: item ? item.id : null };
 
   const isRev = type === 'revenu';
-  const emojis = isRev ? EMOJIS_REV : EMOJIS_ENV;
-  const presets = isRev ? PRESETS_REV : PRESETS_ENV;
+  const isSaving = type === 'saving';
+  const emojis = isRev ? EMOJIS_REV : (isSaving ? EMOJIS_SAVE : EMOJIS_ENV);
+  const presets = isRev ? PRESETS_REV : (isSaving ? PRESETS_SAVE : PRESETS_ENV);
 
   selectedEmoji = item ? item.emoji : (isRev ? '💼' : '🏠');
+
+  if (!item && isSaving) selectedEmoji = '💛';
 
   const title = item ? (isRev ? 'Modifier le revenu' : 'Modifier l\'enveloppe')
                      : (isRev ? 'Nouveau revenu' : 'Nouvelle enveloppe');
   const badge = isRev ? '<span class="badge green">Revenu</span>' : '<span class="badge">Dépense</span>';
   document.getElementById('modalTitle').innerHTML = title + ' ' + badge;
+  if (isSaving) {
+    const savingTitle = item ? 'Modifier un fonds bonheur' : 'Nouveau fonds bonheur';
+    document.getElementById('modalTitle').innerHTML = savingTitle + ' <span class="badge">Fonds bonheur</span>';
+  }
 
   document.getElementById('nameLabel').textContent = isRev ? 'Source du revenu' : 'Nom de l\'enveloppe';
-  document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant à mettre de côté';
-  document.getElementById('dateField').style.display = isRev ? 'block' : 'none';
+  document.getElementById('amountLabel').textContent = isRev ? 'Montant prévu' : 'Montant alloué';
+  document.getElementById('dateField').style.display = 'block';
+  document.getElementById('dateLabel').textContent = isRev ? 'Date prévue' : 'Date de la dépense';
   document.getElementById('presetsLabel').textContent = isRev ? 'Sources rapides' : 'Suggestions rapides';
   document.getElementById('itemName').placeholder = isRev ? 'ex. Paie principale' : 'ex. Épicerie';
+  if (isSaving) {
+    document.getElementById('nameLabel').textContent = 'Nom du fonds';
+    document.getElementById('amountLabel').textContent = 'Montant réservé';
+    document.getElementById('dateLabel').textContent = 'Date cible';
+    document.getElementById('presetsLabel').textContent = 'Idées rapides';
+    document.getElementById('itemName').placeholder = 'ex. Sécurité, Voyage, Sofa';
+  }
 
   const primary = document.getElementById('saveBtn');
   primary.classList.toggle('green', isRev);
 
   document.getElementById('itemName').value = item ? item.name : '';
   document.getElementById('itemAmount').value = item ? item.amount : '';
+  document.getElementById('targetField').style.display = (isSaving || (!isRev && !isSaving)) ? 'block' : 'none';
+  document.getElementById('targetLabel').textContent = isSaving ? 'Objectif total' : 'Montant cible';
+  document.getElementById('itemTarget').placeholder = isSaving ? 'Optionnel' : 'ex. montant total à atteindre';
+  document.getElementById('itemTarget').value = item && item.target_amount ? item.target_amount : (!isRev && item ? item.amount : '');
   document.getElementById('itemDate').value = item && item.date ? item.date : '';
   document.getElementById('deleteBtn').style.display = item ? 'block' : 'none';
 
   selectedRecurrence = item ? (item.recurrence || 'once') : 'once';
+  document.getElementById('recurrenceField').style.display = isSaving ? 'none' : 'block';
   renderRecurrencePick(isRev);
 
   renderEmojiPick(emojis, isRev);
@@ -821,7 +1448,8 @@ function renderPresets(presets) {
       document.getElementById('itemName').value = p.name;
       selectedEmoji = p.emoji;
       const isRev = editing.type === 'revenu';
-      const emojis = isRev ? EMOJIS_REV : EMOJIS_ENV;
+      const isSaving = editing.type === 'saving';
+      const emojis = isRev ? EMOJIS_REV : (isSaving ? EMOJIS_SAVE : EMOJIS_ENV);
       renderEmojiPick(emojis, isRev);
     };
     row.appendChild(c);
@@ -836,6 +1464,10 @@ function renderRecurrencePick(isRev) {
     btn.classList.toggle('green', isRev);
     btn.onclick = (e) => {
       e.preventDefault();
+      if (rec !== 'once' && !isProUser()) {
+        canUseProFeature('Les revenus et dépenses récurrents');
+        return;
+      }
       selectedRecurrence = rec;
       renderRecurrencePick(isRev);
     };
@@ -955,7 +1587,8 @@ document.getElementById('switchToSignup').onclick = () => showScreen('signupScre
 document.getElementById('signupSubmitBtn').onclick = () => {
   signUp(
     document.getElementById('signupEmail').value.trim(),
-    document.getElementById('signupPassword').value
+    document.getElementById('signupPassword').value,
+    document.getElementById('signupPasswordConfirm').value
   );
 };
 
@@ -967,7 +1600,7 @@ document.getElementById('loginSubmitBtn').onclick = () => {
 };
 
 // Enter key dans les champs
-['signupEmail','signupPassword'].forEach(id => {
+['signupEmail','signupPassword','signupPasswordConfirm'].forEach(id => {
   document.getElementById(id).addEventListener('keypress', e => {
     if (e.key === 'Enter') document.getElementById('signupSubmitBtn').click();
   });
@@ -1010,19 +1643,87 @@ document.getElementById('upgradeBtn').onclick = () => {
   showScreen('proScreen');
 };
 
+document.getElementById('manageBillingBtn').onclick = () => {
+  document.getElementById('userDropdown').classList.remove('show');
+  openBillingOptions();
+};
+
+document.getElementById('enableNotificationsBtn').onclick = async () => {
+  document.getElementById('userDropdown').classList.remove('show');
+  const result = await ensurePushNotifications({ ask: true });
+  if (result?.ok) {
+    alert('✅ ' + result.message);
+  } else {
+    alert('Notifications : ' + (result?.message || 'Impossible d’activer les rappels.'));
+  }
+};
+
 // Bouton retour sur la page PRO
 document.getElementById('proBackBtn').onclick = () => {
   showScreen('main');
 };
 
+document.getElementById('billingBackBtn').onclick = () => {
+  showScreen('main');
+};
+
+function getBillingStatusText() {
+  if (!currentSubscription) {
+    return 'Tu es sur le plan gratuit.';
+  }
+
+  const status = currentSubscription.status;
+  if (status === 'lifetime') return 'Accès à vie actif ✨';
+  if (status === 'trialing') {
+    const days = getStripeTrialDaysLeft();
+    return days !== null
+      ? `Essai PRO actif · ${days}j restants`
+      : 'Essai PRO actif';
+  }
+  if (status === 'active') return 'Abonnement PRO actif.';
+  if (status === 'past_due') return 'Paiement en attente.';
+  if (status === 'canceled') return 'Abonnement annulé. Tu peux choisir un nouvel accès.';
+
+  return 'Statut de facturation : ' + status;
+}
+
+function renderBillingOptions() {
+  const currentPlanEl = document.getElementById('billingCurrentPlan');
+  const monthlyBtn = document.getElementById('billingMonthlyBtn');
+  const yearlyBtn = document.getElementById('billingYearlyBtn');
+  const lifetimeBtn = document.getElementById('billingLifetimeBtn');
+  const portalBtn = document.getElementById('billingPortalBtn');
+
+  currentPlanEl.textContent = getBillingStatusText();
+
+  const isLifetime = currentSubscription?.status === 'lifetime';
+  const hasStripeCustomer = Boolean(currentSubscription?.stripe_customer_id);
+
+  monthlyBtn.style.display = isLifetime ? 'none' : 'block';
+  yearlyBtn.style.display = isLifetime ? 'none' : 'block';
+  lifetimeBtn.style.display = isLifetime ? 'none' : 'block';
+  portalBtn.style.display = hasStripeCustomer ? 'block' : 'none';
+}
+
+async function openBillingOptions() {
+  await loadSubscription();
+  renderBillingOptions();
+  showScreen('billingScreen');
+}
+
 // Fonction pour démarrer un abonnement
-async function startSubscription(plan) {
+async function startSubscription(plan, sourceButton = null) {
   if (!currentUser) {
     alert('Tu dois être connecté(e)');
     return;
   }
 
-  const btn = plan === 'yearly' ? document.getElementById('subscribeYearlyBtn') : document.getElementById('subscribeMonthlyBtn');
+  const buttonsByPlan = {
+    monthly: document.getElementById('subscribeMonthlyBtn'),
+    yearly: document.getElementById('subscribeYearlyBtn'),
+    lifetime: document.getElementById('subscribeLifetimeBtn')
+  };
+  const btn = sourceButton || buttonsByPlan[plan];
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Redirection vers Stripe…';
@@ -1059,10 +1760,130 @@ async function startSubscription(plan) {
 
 document.getElementById('subscribeMonthlyBtn').onclick = () => startSubscription('monthly');
 document.getElementById('subscribeYearlyBtn').onclick = () => startSubscription('yearly');
+document.getElementById('subscribeLifetimeBtn').onclick = () => startSubscription('lifetime');
+
+async function changeRecurringPlan(plan, sourceButton) {
+  if (!currentUser) {
+    alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  if (!currentSubscription || !currentSubscription.stripe_subscription_id || currentSubscription.status === 'canceled') {
+    startSubscription(plan, sourceButton);
+    return;
+  }
+
+  if (currentSubscription.status === 'lifetime') {
+    alert("Tu as déjà l'accès à vie ✨");
+    return;
+  }
+
+  const label = plan === 'yearly' ? 'PRO annuel à 29,99 $/an' : 'PRO mensuel à 4,99 $/mois';
+  const ok = confirm(
+    `Changer ton abonnement vers ${label}?\n\nStripe ajustera l'abonnement. S'il y a un prorata, il sera géré avec ton moyen de paiement.`
+  );
+  if (!ok) return;
+
+  const btn = sourceButton;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Mise à jour...';
+
+  try {
+    const response = await fetch(`${API_URL}/api/change-subscription-plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        plan
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+
+    await loadSubscription();
+    render();
+    renderBillingOptions();
+    alert(data.message || 'Ton abonnement a été mis à jour.');
+  } catch (e) {
+    alert("Impossible de changer l'abonnement : " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+document.getElementById('billingMonthlyBtn').onclick = (e) => changeRecurringPlan('monthly', e.currentTarget);
+document.getElementById('billingYearlyBtn').onclick = (e) => changeRecurringPlan('yearly', e.currentTarget);
+document.getElementById('billingLifetimeBtn').onclick = (e) => {
+  if (currentSubscription?.status === 'lifetime') {
+    alert("Tu as déjà l'accès à vie ✨");
+    return;
+  }
+
+  const hasActiveSubscription = Boolean(currentSubscription?.stripe_subscription_id);
+  const ok = hasActiveSubscription
+    ? confirm("Passer à l'accès à vie?\n\nAprès le paiement unique, ton abonnement actuel sera annulé automatiquement.")
+    : true;
+
+  if (ok) startSubscription('lifetime', e.currentTarget);
+};
+document.getElementById('billingPortalBtn').onclick = () => openCustomerPortal();
+
+async function openCustomerPortal() {
+  if (!currentUser) {
+    alert('Tu dois être connecté(e)');
+    return;
+  }
+
+  if (!currentSubscription || !currentSubscription.stripe_customer_id) {
+    window.location.href = STRIPE_PORTAL_LOGIN_URL;
+    return;
+  }
+
+  const btn = document.getElementById('manageBillingBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Ouverture du portail...';
+
+  try {
+    const response = await fetch(`${API_URL}/api/create-portal-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        userEmail: currentUser.email
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.code === 'customer_not_found') {
+      window.location.href = STRIPE_PORTAL_LOGIN_URL;
+      return;
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Pas d\'URL de gestion reçue');
+    }
+  } catch (e) {
+    alert('Impossible d\'ouvrir la gestion de l\'abonnement : ' + e.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
 
 // App
 document.getElementById('addRevenuBtn').onclick = () => openModal('revenu');
 document.getElementById('addEnvBtn').onclick = () => openModal('envelope');
+document.getElementById('addSavingBtn').onclick = () => openModal('saving');
 
 // Bouton "Nouveau cycle"
 document.getElementById('newCycleBtn').onclick = renewCycle;
@@ -1071,8 +1892,12 @@ document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = async () => {
   const name = document.getElementById('itemName').value.trim();
   const amount = parseFloat(document.getElementById('itemAmount').value) || 0;
+  const targetAmount = parseFloat(document.getElementById('itemTarget').value) || 0;
   const date = document.getElementById('itemDate').value;
   if (!name) { alert('Donne un nom'); return; }
+  if (editing.type !== 'saving' && selectedRecurrence !== 'once' && !canUseProFeature('Les revenus et dépenses récurrents')) return;
+  if (!editing.id && editing.type === 'revenu' && !canCreateRevenu()) return;
+  if (!editing.id && editing.type === 'envelope' && !canCreateEnvelope()) return;
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
@@ -1105,11 +1930,43 @@ document.getElementById('saveBtn').onclick = async () => {
         });
       }
     }
+  } else if (editing.type === 'saving') {
+    if (editing.id) {
+      const saving = state.savings.find(x => x.id === editing.id);
+      if (saving) {
+        saving.name = name;
+        saving.amount = amount;
+        saving.target_amount = targetAmount || null;
+        saving.emoji = selectedEmoji;
+        saving.date = date;
+        await saveSaving(saving, false);
+      }
+    } else {
+      const newSaving = {
+        emoji: selectedEmoji,
+        name,
+        amount,
+        target_amount: targetAmount || null,
+        date
+      };
+      const saved = await saveSaving(newSaving, true);
+      if (saved) {
+        state.savings.push({
+          id: saved.id,
+          emoji: saved.emoji || '💛',
+          name: saved.name,
+          amount: parseFloat(saved.amount) || 0,
+          target_amount: saved.target_amount !== null && saved.target_amount !== undefined ? parseFloat(saved.target_amount) : null,
+          date: saved.date || ''
+        });
+      }
+    }
   } else {
     if (editing.id) {
       const e = state.envelopes.find(x => x.id === editing.id);
       if (e) {
         e.name = name; e.amount = amount; e.emoji = selectedEmoji;
+        e.target_amount = targetAmount || amount || null;
         e.date = date;
         e.recurrence = selectedRecurrence;
         await saveEnvelope(e, false);
@@ -1117,6 +1974,7 @@ document.getElementById('saveBtn').onclick = async () => {
     } else {
       const newEnv = {
         emoji: selectedEmoji, name, amount, allocated: false,
+        target_amount: targetAmount || amount || null,
         date,
         recurrence: selectedRecurrence
       };
@@ -1127,6 +1985,7 @@ document.getElementById('saveBtn').onclick = async () => {
           emoji: saved.emoji,
           name: saved.name,
           amount: parseFloat(saved.amount),
+          target_amount: saved.target_amount !== null && saved.target_amount !== undefined ? parseFloat(saved.target_amount) : null,
           allocated: saved.allocated,
           date: saved.date || '',
           recurrence: saved.recurrence || 'once'
@@ -1147,6 +2006,9 @@ document.getElementById('deleteBtn').onclick = async () => {
   if (editing.type === 'revenu') {
     await deleteRevenu(editing.id);
     state.revenus = state.revenus.filter(r => r.id !== editing.id);
+  } else if (editing.type === 'saving') {
+    await deleteSaving(editing.id);
+    state.savings = state.savings.filter(s => s.id !== editing.id);
   } else {
     await deleteEnvelope(editing.id);
     state.envelopes = state.envelopes.filter(e => e.id !== editing.id);
@@ -1158,7 +2020,28 @@ document.getElementById('deleteBtn').onclick = async () => {
 document.body.addEventListener('click', async e => {
   const t = e.target.closest('button');
   if (!t) return;
-  if (t.dataset.revToggle) {
+  if (t.dataset.action === 'open-upcoming' || t.id === 'upcomingBtn') {
+    openUpcomingPopup();
+    return;
+  } else if (t.dataset.action === 'upcoming-prev') {
+    upcomingMonth.setMonth(upcomingMonth.getMonth() - 1);
+    if (!selectedUpcomingDate || !sameMonth(new Date(selectedUpcomingDate + 'T00:00:00'), upcomingMonth)) {
+      selectFirstUpcomingDateInVisibleMonth();
+    }
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.action === 'upcoming-next') {
+    upcomingMonth.setMonth(upcomingMonth.getMonth() + 1);
+    if (!selectedUpcomingDate || !sameMonth(new Date(selectedUpcomingDate + 'T00:00:00'), upcomingMonth)) {
+      selectFirstUpcomingDateInVisibleMonth();
+    }
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.upcomingDate) {
+    selectedUpcomingDate = t.dataset.upcomingDate;
+    renderUpcomingPopup();
+    return;
+  } else if (t.dataset.revToggle) {
     const r = state.revenus.find(x => x.id === t.dataset.revToggle);
     if (r) {
       r.received = !r.received;
@@ -1178,11 +2061,19 @@ document.body.addEventListener('click', async e => {
   } else if (t.dataset.envEdit) {
     const e2 = state.envelopes.find(x => x.id === t.dataset.envEdit);
     if (e2) openModal('envelope', e2);
+  } else if (t.dataset.saveEdit) {
+    const saving = state.savings.find(x => x.id === t.dataset.saveEdit);
+    if (saving) openModal('saving', saving);
   }
 });
 
 document.getElementById('modal').addEventListener('click', e => {
   if (e.target.id === 'modal') closeModal();
+});
+
+document.getElementById('upcomingClose').addEventListener('click', closeUpcomingPopup);
+document.getElementById('upcomingOverlay').addEventListener('click', e => {
+  if (e.target.id === 'upcomingOverlay') closeUpcomingPopup();
 });
 
 document.getElementById('resetBtn').onclick = async () => {
@@ -1191,7 +2082,8 @@ document.getElementById('resetBtn').onclick = async () => {
   try {
     await supabaseClient.from('revenus').delete().eq('user_id', currentUser.id);
     await supabaseClient.from('envelopes').delete().eq('user_id', currentUser.id);
-    state = { revenus: [], envelopes: [] };
+    await supabaseClient.from('savings').delete().eq('user_id', currentUser.id);
+    state = { revenus: [], envelopes: [], savings: [] };
     render();
   } catch (e) {
     alert('Erreur : ' + e.message);
@@ -1233,319 +2125,6 @@ document.getElementById('calClear').addEventListener('click', function(e) {
   updateDateButton();
   closeCalendar();
 });
-
-// ============================================================
-// VUE CALENDRIER (nouvelle)
-// ============================================================
-let currentView = 'main'; // 'main' ou 'calendar'
-let calMonth = new Date().getMonth();
-let calYear = new Date().getFullYear();
-let calSelectedDate = null; // 'YYYY-MM-DD' ou null
-
-// Basculer entre vue principale et calendrier
-document.getElementById('viewToggleBtn').onclick = () => {
-  if (currentView === 'main') {
-    showCalendarView();
-  } else {
-    showMainView();
-  }
-};
-
-function showMainView() {
-  currentView = 'main';
-  document.getElementById('viewMain').style.display = 'block';
-  document.getElementById('viewCalendar').style.display = 'none';
-  document.getElementById('viewToggleBtn').textContent = '📅';
-  document.getElementById('viewToggleBtn').classList.remove('active');
-}
-
-function showCalendarView() {
-  currentView = 'calendar';
-  document.getElementById('viewMain').style.display = 'none';
-  document.getElementById('viewCalendar').style.display = 'block';
-  document.getElementById('viewToggleBtn').textContent = '📋';
-  document.getElementById('viewToggleBtn').classList.add('active');
-  // Forcer aujourd'hui sélectionné par défaut
-  if (!calSelectedDate) {
-    const t = new Date();
-    calSelectedDate = formatDateISO(t);
-    calMonth = t.getMonth();
-    calYear = t.getFullYear();
-  }
-  renderCalendarView();
-}
-
-// Format date en YYYY-MM-DD
-function formatDateISO(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-// Navigation mois précédent/suivant
-document.getElementById('calPrevBtn').onclick = () => {
-  calMonth--;
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  renderCalendarView();
-};
-
-document.getElementById('calNextBtn').onclick = () => {
-  calMonth++;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  renderCalendarView();
-};
-
-// Calculer toutes les occurrences pour un item
-function getOccurrences(item, fromDate, toDate) {
-  if (!item.date) return [];
-
-  const startDate = new Date(item.date + 'T00:00:00');
-  const occurrences = [];
-
-  // Si pas récurrent: une seule occurrence
-  if (!item.recurrence || item.recurrence === 'once') {
-    if (startDate >= fromDate && startDate <= toDate) {
-      occurrences.push({ ...item, occDate: formatDateISO(startDate) });
-    }
-    return occurrences;
-  }
-
-  // Avancer date jusqu'à fromDate
-  let current = new Date(startDate);
-
-  // Si date originale est dans le passé, avancer jusqu'au présent
-  const MAX_ITERATIONS = 1000;
-  let iter = 0;
-
-  // Inclure toutes les occurrences dans la plage [fromDate, toDate]
-  // On part de la date originale et on avance
-  while (current <= toDate && iter < MAX_ITERATIONS) {
-    if (current >= fromDate) {
-      occurrences.push({ ...item, occDate: formatDateISO(current) });
-    }
-    // Avancer selon récurrence
-    switch (item.recurrence) {
-      case 'weekly': current.setDate(current.getDate() + 7); break;
-      case 'biweekly': current.setDate(current.getDate() + 14); break;
-      case 'monthly': current.setMonth(current.getMonth() + 1); break;
-      case 'quarterly': current.setMonth(current.getMonth() + 3); break;
-      case 'yearly': current.setFullYear(current.getFullYear() + 1); break;
-      default: return occurrences;
-    }
-    iter++;
-  }
-
-  return occurrences;
-}
-
-// Récupérer toutes les occurrences (revenus + enveloppes) pour une plage
-function getAllOccurrences(fromDate, toDate) {
-  const result = [];
-
-  state.revenus.forEach(r => {
-    const occs = getOccurrences(r, fromDate, toDate);
-    occs.forEach(o => result.push({ ...o, kind: 'revenu' }));
-  });
-
-  state.envelopes.forEach(e => {
-    // Pour les enveloppes, on utilise leur date si elle existe (la date originale)
-    // Sinon on utilise leur date de création comme date de référence
-    if (e.date) {
-      const occs = getOccurrences(e, fromDate, toDate);
-      occs.forEach(o => result.push({ ...o, kind: 'envelope' }));
-    }
-  });
-
-  return result;
-}
-
-// Rendre la vue calendrier
-function renderCalendarView() {
-  // Titre du mois
-  const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  document.getElementById('calMonthTitle').textContent = `${monthNames[calMonth]} ${calYear}`;
-
-  // Calculer les jours du mois
-  const firstDay = new Date(calYear, calMonth, 1);
-  const lastDay = new Date(calYear, calMonth + 1, 0);
-  const startWeekday = firstDay.getDay(); // 0=dim, 6=sam
-  const daysInMonth = lastDay.getDate();
-
-  // Plage pour calculer occurrences (1 mois entier)
-  const fromDate = new Date(calYear, calMonth, 1);
-  const toDate = new Date(calYear, calMonth + 1, 0);
-  toDate.setHours(23, 59, 59, 999);
-
-  const allOccs = getAllOccurrences(fromDate, toDate);
-
-  // Grouper par date
-  const occsByDate = {};
-  allOccs.forEach(o => {
-    if (!occsByDate[o.occDate]) occsByDate[o.occDate] = [];
-    occsByDate[o.occDate].push(o);
-  });
-
-  // Aujourd'hui
-  const today = new Date();
-  const todayISO = formatDateISO(today);
-
-  // Construire la grille
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-
-  // Cases vides au début
-  for (let i = 0; i < startWeekday; i++) {
-    const empty = document.createElement('div');
-    empty.className = 'cal-day empty';
-    grid.appendChild(empty);
-  }
-
-  // Jours du mois
-  for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(calYear, calMonth, day);
-    const iso = formatDateISO(d);
-    const btn = document.createElement('button');
-    btn.className = 'cal-day';
-    btn.textContent = day;
-
-    if (iso === todayISO) btn.classList.add('today');
-    if (iso === calSelectedDate) btn.classList.add('selected');
-
-    // Points colorés
-    const occs = occsByDate[iso] || [];
-    if (occs.length > 0) {
-      const dotsBox = document.createElement('div');
-      dotsBox.className = 'cal-dots';
-      const hasIncome = occs.some(o => o.kind === 'revenu');
-      const hasExpense = occs.some(o => o.kind === 'envelope');
-      if (hasIncome) {
-        const dot = document.createElement('div');
-        dot.className = 'cal-dot income';
-        dotsBox.appendChild(dot);
-      }
-      if (hasExpense) {
-        const dot = document.createElement('div');
-        dot.className = 'cal-dot expense';
-        dotsBox.appendChild(dot);
-      }
-      btn.appendChild(dotsBox);
-    }
-
-    btn.onclick = () => {
-      calSelectedDate = iso;
-      renderCalendarView();
-    };
-
-    grid.appendChild(btn);
-  }
-
-  // Liste sous le calendrier — afficher prochains paiements à partir de la date sélectionnée
-  renderCalendarList();
-}
-
-// Rendre la liste des paiements à venir
-function renderCalendarList() {
-  const list = document.getElementById('calList');
-  const titleEl = document.getElementById('calSelectedTitle');
-
-  // Date de départ: sélectionnée, ou aujourd'hui
-  const startDate = calSelectedDate
-    ? new Date(calSelectedDate + 'T00:00:00')
-    : new Date();
-  startDate.setHours(0, 0, 0, 0);
-
-  // Plage: 60 jours à venir depuis la date de départ
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + 60);
-
-  const allOccs = getAllOccurrences(startDate, endDate);
-
-  // Trier par date
-  allOccs.sort((a, b) => a.occDate.localeCompare(b.occDate));
-
-  // Titre
-  const today = new Date(); today.setHours(0,0,0,0);
-  const isToday = calSelectedDate === formatDateISO(today);
-  if (isToday) {
-    titleEl.textContent = 'Prochains paiements';
-  } else if (calSelectedDate) {
-    const d = new Date(calSelectedDate + 'T00:00:00');
-    const days = ['dim','lun','mar','mer','jeu','ven','sam'];
-    const months = ['jan','fév','mar','avr','mai','juin','juil','août','sept','oct','nov','déc'];
-    titleEl.textContent = `À partir du ${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
-  } else {
-    titleEl.textContent = 'Prochains paiements';
-  }
-
-  list.innerHTML = '';
-
-  if (allOccs.length === 0) {
-    list.innerHTML = '<div class="cal-empty">Aucun paiement prévu sur les 60 prochains jours.<br><span style="font-size:12px;">Ajoute des éléments récurrents dans la vue principale.</span></div>';
-    return;
-  }
-
-  // Grouper par date
-  const byDate = {};
-  allOccs.forEach(o => {
-    if (!byDate[o.occDate]) byDate[o.occDate] = [];
-    byDate[o.occDate].push(o);
-  });
-
-  // Afficher chaque groupe
-  Object.keys(byDate).sort().forEach(dateISO => {
-    const items = byDate[dateISO];
-    const d = new Date(dateISO + 'T00:00:00');
-    const days = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-    const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-    const dayLabel = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
-
-    const groupEl = document.createElement('div');
-    groupEl.className = 'cal-day-group';
-    groupEl.innerHTML = `
-      <div class="cal-day-group-title">${dayLabel}</div>
-      <div class="cal-day-group-count">${items.length} paiement${items.length>1?'s':''}</div>
-    `;
-    list.appendChild(groupEl);
-
-    items.forEach(item => {
-      const daysFromNow = Math.round((d - today) / 86400000);
-      let when;
-      if (daysFromNow === 0) when = 'aujourd\'hui';
-      else if (daysFromNow === 1) when = 'demain';
-      else if (daysFromNow > 1) when = `dans ${daysFromNow} jours`;
-      else when = `il y a ${-daysFromNow}j`;
-
-      const meta = [];
-      meta.push(`${d.getDate()} ${months[d.getMonth()].substring(0,3)}`.toUpperCase());
-      meta.push(when.toUpperCase());
-      if (item.recurrence && item.recurrence !== 'once') {
-        meta.push(getRecurrenceLabel(item.recurrence).replace('🔁 ', '').toUpperCase());
-      }
-
-      const itemEl = document.createElement('div');
-      itemEl.className = 'cal-item ' + (item.kind === 'revenu' ? 'income' : '');
-      itemEl.innerHTML = `
-        <div class="cal-item-emoji">${item.emoji}</div>
-        <div class="cal-item-info">
-          <div class="cal-item-name">${escapeHtml(item.name)}</div>
-          <div class="cal-item-meta">${meta.join(' · ')}</div>
-        </div>
-        <div class="cal-item-amount">${fmt(item.amount)}</div>
-      `;
-      list.appendChild(itemEl);
-    });
-  });
-}
-
-// Quand on revient sur la vue principale ou qu'on update les données, rafraîchir le calendrier aussi
-const originalRender = render;
-render = function() {
-  originalRender.apply(this, arguments);
-  if (currentView === 'calendar') {
-    renderCalendarView();
-  }
-};
 
 // ============================================================
 // INIT

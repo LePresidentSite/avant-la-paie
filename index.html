@@ -3,13 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0f0e17">
+<meta name="theme-color" content="#0F1115">
 <title>Avant la Paie</title>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json?v=4">
+<link rel="icon" href="favicon.ico?v=1" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=1">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=1">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png?v=1">
+<link rel="apple-touch-icon" sizes="120x120" href="icon-120.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-B33RDK53TM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-B33RDK53TM');
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -194,6 +208,20 @@
     line-height: 1.7;
   }
   .auth-features div { margin-bottom: 4px; }
+  .legal-links {
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 18px;
+  }
+  .legal-links a {
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 
   .auth-trial-badge {
     display: inline-block;
@@ -314,8 +342,79 @@
     font-size: 14px;
     cursor: pointer;
   }
+  .user-dropdown a {
+    display: block;
+    width: 100%;
+    text-align: left;
+    color: var(--ink);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .user-dropdown a:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button.danger { color: var(--warn); }
+
+  .upcoming-card {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 42px 1fr 24px;
+    align-items: center;
+    gap: 12px;
+    margin: -8px 0 16px;
+    padding: 13px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,254,0.10);
+    background: linear-gradient(140deg, rgba(255,255,254,0.055), rgba(255,137,6,0.055));
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    text-align: left;
+    cursor: pointer;
+  }
+  .upcoming-card:active {
+    background: linear-gradient(140deg, rgba(255,255,254,0.085), rgba(255,137,6,0.08));
+    transform: scale(0.99);
+  }
+  .upcoming-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,137,6,0.14);
+    border: 1px solid rgba(255,137,6,0.20);
+    font-size: 19px;
+  }
+  .upcoming-card-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .upcoming-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    font-style: italic;
+  }
+  .upcoming-card-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .upcoming-card-arrow {
+    color: var(--accent);
+    font-size: 24px;
+    line-height: 1;
+  }
 
   .section-title {
     display: flex;
@@ -421,6 +520,54 @@
     margin-left: 6px;
   }
   .item-amount strong.green { color: var(--good); font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .item-amount strong.saving { color: #a78bfa; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .item-progress-meta {
+    width: 100%;
+    max-width: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .item-progress-meta span:first-child {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .item-progress {
+    height: 6px;
+    width: 100%;
+    max-width: 240px;
+    background: rgba(255,255,254,0.06);
+    border-radius: 999px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .item-progress div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #c084fc);
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
+  .saving-progress {
+    height: 5px;
+    width: 100%;
+    max-width: 220px;
+    background: rgba(167,139,250,0.12);
+    border-radius: 999px;
+    margin-top: 7px;
+    overflow: hidden;
+  }
+  .saving-progress div {
+    height: 100%;
+    background: linear-gradient(90deg, #a78bfa, var(--accent));
+    border-radius: 999px;
+    transition: width 0.35s ease;
+  }
 
   .rec-badge {
     display: inline-block;
@@ -438,232 +585,6 @@
   .rec-badge.green {
     background: rgba(44,182,125,0.12);
     color: var(--good);
-  }
-
-  /* VIEW TOGGLE BUTTON */
-  .view-toggle-btn {
-    background: rgba(255,255,254,0.06);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .view-toggle-btn:active { transform: scale(0.92); }
-  .view-toggle-btn.active {
-    background: rgba(255,137,6,0.15);
-    border-color: var(--accent);
-  }
-
-  /* CALENDRIER */
-  .cal-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 8px 0 12px;
-  }
-  .cal-month-title {
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 18px;
-    letter-spacing: -0.02em;
-    text-transform: lowercase;
-    min-width: 140px;
-    text-align: center;
-  }
-  .cal-nav-btn {
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink);
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    font-family: 'Fraunces', serif;
-  }
-  .cal-nav-btn:active { background: rgba(255,137,6,0.10); }
-
-  .cal-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-    padding: 0 2px 4px;
-  }
-  .cal-weekdays > div {
-    text-align: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--ink-soft);
-    letter-spacing: 0.1em;
-    padding: 2px;
-  }
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-    padding: 0 2px;
-  }
-  .cal-day {
-    aspect-ratio: 1;
-    max-height: 42px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 9px;
-    color: var(--ink);
-    font-family: 'Fraunces', serif;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-    padding: 0;
-  }
-  .cal-day.empty {
-    cursor: default;
-    pointer-events: none;
-  }
-  .cal-day:not(.empty):hover {
-    background: rgba(255,255,254,0.04);
-  }
-  .cal-day:active {
-    transform: scale(0.95);
-  }
-  .cal-day.other-month {
-    color: var(--ink-soft);
-    opacity: 0.35;
-  }
-  .cal-day.today {
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 700;
-  }
-  .cal-day.selected {
-    border-color: var(--accent);
-    background: rgba(255,137,6,0.10);
-    color: var(--accent);
-    font-weight: 600;
-  }
-  .cal-day.today.selected {
-    background: var(--accent);
-    color: var(--bg);
-  }
-  .cal-dots {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 2px;
-  }
-  .cal-dot {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-  }
-  .cal-dot.expense { background: var(--accent); }
-  .cal-dot.income { background: var(--good); }
-
-  .cal-list-header {
-    margin-top: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--line);
-  }
-  .cal-list-header h2 {
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .cal-day-group {
-    margin: 16px 0 4px;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-  .cal-day-group-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: -0.01em;
-  }
-  .cal-day-group-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: var(--ink-soft);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .cal-item {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 10px 12px;
-    margin-top: 6px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .cal-item-emoji {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    background: rgba(255,137,6,0.10);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 17px;
-    flex-shrink: 0;
-  }
-  .cal-item.income .cal-item-emoji {
-    background: rgba(44,182,125,0.10);
-  }
-  .cal-item-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .cal-item-name {
-    font-family: 'Fraunces', serif;
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 1px;
-  }
-  .cal-item-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .cal-item-amount {
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--accent);
-    white-space: nowrap;
-  }
-  .cal-item.income .cal-item-amount {
-    color: var(--good);
-  }
-  .cal-empty {
-    text-align: center;
-    color: var(--ink-soft);
-    font-style: italic;
-    padding: 30px 20px;
-    font-size: 13px;
   }
 
   .item-actions { display: flex; gap: 6px; }
@@ -756,6 +677,8 @@
   .add-inline.green:active { background: rgba(44,182,125,0.1); color: var(--good); }
   .add-inline.orange { border-color: rgba(255,137,6,0.3); }
   .add-inline.orange:active { background: rgba(255,137,6,0.1); color: var(--accent); }
+  .add-inline.purple { border-color: rgba(167,139,250,0.35); }
+  .add-inline.purple:active { background: rgba(167,139,250,0.1); color: #c4b5fd; }
 
   /* MODAL */
   .modal-bg {
@@ -1023,6 +946,219 @@
   .cal-actions button:active { background: rgba(255,255,254,0.06); color: var(--ink); }
   .cal-actions button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
 
+  /* APERÇU PAIEMENTS À VENIR */
+  .upcoming-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.64);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 180;
+    padding: 20px;
+    animation: fade 0.2s ease;
+  }
+  .upcoming-overlay.show { display: flex; }
+  .upcoming-popup {
+    width: 100%;
+    max-width: 410px;
+    max-height: 82vh;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.42);
+  }
+  .upcoming-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 18px 12px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .upcoming-head h3 {
+    font-size: 19px;
+    font-weight: 700;
+    font-style: italic;
+    margin: 0;
+  }
+  .upcoming-close {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,254,0.04);
+    color: var(--ink);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .upcoming-list {
+    padding: 12px;
+    overflow-y: auto;
+    max-height: calc(82vh - 68px);
+  }
+  .upcoming-calendar {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.13);
+    margin-bottom: 12px;
+  }
+  .upcoming-cal-nav {
+    display: grid;
+    grid-template-columns: 38px 1fr 38px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .upcoming-cal-title {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    font-style: italic;
+  }
+  .upcoming-cal-btn {
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255,255,254,0.04);
+    color: var(--ink);
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .upcoming-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+    padding: 9px;
+  }
+  .upcoming-cal-weekday {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--ink-soft);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 0 6px;
+  }
+  .upcoming-cal-day {
+    min-height: 36px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    position: relative;
+  }
+  .upcoming-cal-day.empty {
+    cursor: default;
+  }
+  .upcoming-cal-day.has-payment {
+    color: var(--ink);
+    background: rgba(255,137,6,0.10);
+    border-color: rgba(255,137,6,0.18);
+  }
+  .upcoming-cal-day.has-payment::after {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    transform: translateX(-50%);
+  }
+  .upcoming-cal-day.today {
+    border-color: rgba(255,255,254,0.28);
+  }
+  .upcoming-cal-day.selected {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .upcoming-cal-day.selected::after {
+    background: var(--bg);
+  }
+  .upcoming-day-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 12px 2px 8px;
+  }
+  .upcoming-day-title h4 {
+    font-size: 15px;
+    font-weight: 700;
+    font-style: italic;
+  }
+  .upcoming-day-title span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .upcoming-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,254,0.035);
+    margin-bottom: 8px;
+  }
+  .upcoming-item.overdue {
+    border: 1px solid rgba(229,49,112,0.28);
+    background: rgba(229,49,112,0.08);
+  }
+  .upcoming-emoji {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(255,255,254,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .upcoming-info { flex: 1; min-width: 0; }
+  .upcoming-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .upcoming-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .upcoming-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .upcoming-empty {
+    padding: 26px 18px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
   /* LOADING */
   .loading-screen {
     min-height: 100vh;
@@ -1051,6 +1187,548 @@
     text-decoration: underline;
     cursor: pointer;
   }
+
+  /* ============================================
+     REFONTE PREMIUM FUTURISTE - DARK DOPAMINE
+     ============================================ */
+  :root {
+    --bg: #0F1115;
+    --surface: rgba(23, 26, 33, 0.82);
+    --surface-2: rgba(29, 33, 42, 0.9);
+    --ink: #F5F5F5;
+    --ink-soft: #9CA3AF;
+    --accent: #FF8A3D;
+    --accent-2: #FFB84D;
+    --good: #78F0A6;
+    --warn: #FF6B8A;
+    --line: rgba(255,255,255,0.11);
+    --radius: 26px;
+    --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display: 'Fraunces', Georgia, serif;
+    --glass: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028));
+    --warm-glow: 0 0 34px rgba(255,184,77,0.18), 0 18px 60px rgba(0,0,0,0.42);
+  }
+
+  body * { letter-spacing: 0 !important; }
+
+  html, body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+  }
+
+  body {
+    background:
+      linear-gradient(180deg, #0F1115 0%, #0A0B0F 44%, #111014 100%);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      linear-gradient(135deg, rgba(255,184,77,0.10), transparent 28%),
+      linear-gradient(315deg, rgba(255,138,61,0.08), transparent 34%);
+  }
+
+  .auth-screen,
+  .app {
+    animation: softIn 0.45s ease both;
+  }
+
+  @keyframes softIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .app {
+    max-width: 620px;
+    padding: 28px 18px 72px;
+  }
+
+  .auth-card {
+    max-width: 460px;
+  }
+
+  .auth-logo,
+  .logo {
+    font-family: var(--font-display);
+    color: var(--ink);
+    text-shadow: 0 0 24px rgba(255,184,77,0.18);
+  }
+
+  .auth-logo span,
+  .logo span {
+    color: var(--accent-2);
+    text-shadow: 0 0 18px rgba(255,184,77,0.42);
+  }
+
+  .auth-tagline,
+  .auth-form .subtitle,
+  .remaining .sub {
+    color: var(--ink-soft);
+    font-family: var(--font-ui);
+    font-style: normal;
+  }
+
+  .auth-form,
+  .total-revenus,
+  .remaining,
+  .item,
+  .upcoming-card,
+  #cycleBar,
+  .modal,
+  .cal-popup,
+  .upcoming-popup,
+  .user-dropdown {
+    background: var(--glass) !important;
+    border: 1px solid var(--line) !important;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.42);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .auth-form,
+  .remaining,
+  .total-revenus,
+  .upcoming-card,
+  #cycleBar {
+    border-radius: var(--radius) !important;
+  }
+
+  .auth-form {
+    padding: 30px 24px;
+  }
+
+  .auth-form h2,
+  .section-title h2,
+  .modal h3,
+  .upcoming-card-title,
+  .upcoming-head h3,
+  .upcoming-day-title h4 {
+    font-family: var(--font-display);
+    font-style: normal;
+  }
+
+  .auth-field label,
+  .field label,
+  .presets-label,
+  .section-title span,
+  .remaining .label,
+  .total-revenus .label,
+  .total-revenus .countdown,
+  .upcoming-card-sub,
+  .item-amount,
+  .user-dropdown .user-plan {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: none;
+  }
+
+  .auth-input,
+  input[type="number"],
+  input[type="date"],
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  .date-trigger {
+    background: rgba(5,7,11,0.72);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 18px;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    min-height: 54px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  }
+
+  .auth-input:focus,
+  input:focus,
+  .date-trigger:active {
+    border-color: rgba(255,184,77,0.72);
+    box-shadow: 0 0 0 4px rgba(255,184,77,0.10), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .auth-btn,
+  .btn-primary,
+  #newCycleBtn {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent)) !important;
+    color: #14100B !important;
+    border-radius: 18px !important;
+    box-shadow: 0 14px 34px rgba(255,138,61,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
+    font-family: var(--font-ui) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .auth-btn:hover,
+  .btn-primary:hover,
+  #newCycleBtn:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow: 0 18px 44px rgba(255,138,61,0.34), inset 0 1px 0 rgba(255,255,255,0.34);
+  }
+
+  .btn-ghost,
+  .auth-btn.ghost,
+  .cal-actions button,
+  .upcoming-cal-btn {
+    background: rgba(255,255,255,0.04) !important;
+    border-color: rgba(255,255,255,0.10) !important;
+    color: var(--ink) !important;
+    border-radius: 16px !important;
+  }
+
+  header {
+    margin-bottom: 22px;
+  }
+
+  .date {
+    font-size: 12px;
+    color: #C8CED8;
+  }
+
+  .user-btn,
+  .icon-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .user-btn:hover,
+  .icon-btn:hover {
+    background: rgba(255,184,77,0.12);
+    box-shadow: 0 0 18px rgba(255,184,77,0.16);
+  }
+
+  .app-affirmation {
+    position: relative;
+    overflow: hidden;
+    margin: 0 0 18px;
+    padding: 18px 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, rgba(255,184,77,0.12), rgba(255,255,255,0.035));
+    border: 1px solid rgba(255,184,77,0.18);
+    box-shadow: var(--warm-glow);
+  }
+
+  .app-affirmation::after {
+    content: "";
+    position: absolute;
+    inset: auto 16px 0 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,184,77,0.6), transparent);
+  }
+
+  .app-affirmation .kicker {
+    display: block;
+    color: var(--accent-2);
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .app-affirmation strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1.15;
+    margin-bottom: 7px;
+  }
+
+  .app-affirmation span:last-child {
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .upcoming-card {
+    grid-template-columns: 50px 1fr 26px;
+    gap: 14px;
+    padding: 16px 18px;
+    margin: 0 0 18px;
+    background: linear-gradient(145deg, rgba(255,184,77,0.09), rgba(255,255,255,0.032)) !important;
+  }
+
+  .upcoming-card-icon,
+  .item-emoji {
+    background: linear-gradient(145deg, rgba(255,184,77,0.18), rgba(255,138,61,0.08));
+    border: 1px solid rgba(255,184,77,0.18);
+    box-shadow: 0 0 18px rgba(255,184,77,0.12);
+  }
+
+  .upcoming-card-title {
+    font-size: 17px;
+  }
+
+  #cycleBar {
+    padding: 18px !important;
+    margin: 20px 0 28px !important;
+    gap: 14px !important;
+    background: linear-gradient(145deg, rgba(255,138,61,0.11), rgba(255,255,255,0.035)) !important;
+  }
+
+  #cycleBarText {
+    color: #D6D9E0;
+    font-family: var(--font-ui);
+    font-style: normal;
+  }
+
+  #newCycleBtn {
+    padding: 12px 16px !important;
+    min-height: 46px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    margin: 30px 4px 14px;
+  }
+
+  .section-title h2 {
+    font-size: 22px;
+    color: var(--ink);
+  }
+
+  .total-revenus {
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 40px rgba(120,240,166,0.10), 0 20px 70px rgba(0,0,0,0.38);
+  }
+
+  .total-revenus::before {
+    background: linear-gradient(120deg, rgba(120,240,166,0.16), transparent 55%);
+  }
+
+  .total-revenus .amount,
+  .remaining .amount {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+  }
+
+  .total-revenus .amount {
+    color: var(--good);
+    font-size: 40px;
+    text-shadow: 0 0 24px rgba(120,240,166,0.22);
+  }
+
+  .remaining {
+    padding: 32px 24px;
+    margin: 24px 0 12px;
+    box-shadow: 0 0 42px rgba(255,184,77,0.12), 0 26px 80px rgba(0,0,0,0.42);
+  }
+
+  .remaining::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(140deg, rgba(255,184,77,0.14), transparent 48%);
+  }
+
+  .remaining > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .remaining .amount {
+    font-size: clamp(48px, 12vw, 72px);
+    text-shadow: 0 0 26px rgba(255,184,77,0.18);
+  }
+
+  .remaining .amount.warn {
+    color: var(--accent-2);
+  }
+
+  .remaining .amount.good {
+    color: var(--good);
+    text-shadow: 0 0 28px rgba(120,240,166,0.20);
+  }
+
+  .remaining .amount.over {
+    color: var(--warn);
+    text-shadow: 0 0 22px rgba(255,107,138,0.20);
+  }
+
+  .progress-bar,
+  .saving-progress,
+  .item-progress {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .progress-bar div,
+  .saving-progress div,
+  .item-progress div {
+    background: linear-gradient(90deg, var(--accent-2), var(--accent), #A78BFA);
+    box-shadow: 0 0 18px rgba(255,184,77,0.28);
+  }
+
+  .item-progress-meta {
+    max-width: 260px;
+    color: rgba(245,245,245,0.58);
+  }
+
+  .item-progress-meta span:first-child {
+    color: var(--accent-2);
+    text-shadow: 0 0 14px rgba(255,184,77,0.18);
+  }
+
+  .item {
+    border-radius: 22px;
+    padding: 16px 16px;
+    margin-bottom: 12px;
+  }
+
+  .item.received,
+  .item.allocated {
+    border-color: rgba(120,240,166,0.28) !important;
+    box-shadow: 0 0 24px rgba(120,240,166,0.08);
+  }
+
+  .item-name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .item-amount strong.green {
+    color: var(--good);
+  }
+
+  .item-amount strong.saving {
+    color: #D8C7FF;
+  }
+
+  .rec-badge {
+    background: rgba(255,184,77,0.12);
+    border: 1px solid rgba(255,184,77,0.16);
+    color: var(--accent-2);
+    font-size: 10px;
+  }
+
+  .rec-badge.green {
+    background: rgba(120,240,166,0.12);
+    border-color: rgba(120,240,166,0.18);
+    color: var(--good);
+  }
+
+  .icon-btn.check.on {
+    background: linear-gradient(135deg, var(--good), #48C781);
+    color: #06110A;
+    box-shadow: 0 0 20px rgba(120,240,166,0.22);
+  }
+
+  .add-inline {
+    min-height: 54px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.035);
+    border: 1px dashed rgba(255,255,255,0.14);
+    color: #D6D9E0;
+    font-family: var(--font-ui);
+    font-size: 15px;
+  }
+
+  .add-inline:hover {
+    background: rgba(255,184,77,0.08);
+    border-color: rgba(255,184,77,0.28);
+    color: var(--ink);
+  }
+
+  .modal {
+    border-radius: 28px 28px 0 0;
+  }
+
+  .modal h3 .badge,
+  .auth-trial-badge {
+    background: rgba(255,184,77,0.12);
+    border: 1px solid rgba(255,184,77,0.18);
+    color: var(--accent-2);
+  }
+
+  .preset-chip,
+  .rec-btn,
+  .emoji-pick button {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.10);
+    color: var(--ink);
+  }
+
+  .preset-chip:hover,
+  .rec-btn:hover,
+  .emoji-pick button:hover {
+    border-color: rgba(255,184,77,0.28);
+    background: rgba(255,184,77,0.08);
+  }
+
+  .rec-btn.sel,
+  .emoji-pick button.sel {
+    background: rgba(255,184,77,0.14);
+    border-color: var(--accent-2);
+    color: var(--accent-2);
+    box-shadow: 0 0 18px rgba(255,184,77,0.16);
+  }
+
+  .cal-popup,
+  .upcoming-popup {
+    border-radius: 26px;
+    box-shadow: 0 0 44px rgba(255,184,77,0.12), 0 24px 90px rgba(0,0,0,0.52);
+  }
+
+  .cal-day.today,
+  .upcoming-cal-day.has-payment {
+    color: var(--accent-2);
+    border-color: rgba(255,184,77,0.28);
+    background: rgba(255,184,77,0.10);
+  }
+
+  .cal-day.selected,
+  .upcoming-cal-day.selected,
+  .cal-actions button.primary {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    color: #14100B;
+    border-color: transparent;
+  }
+
+  .upcoming-item {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px;
+  }
+
+  @media (hover: hover) {
+    .item:hover,
+    .upcoming-card:hover,
+    .auth-form:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,184,77,0.22) !important;
+      box-shadow: 0 0 34px rgba(255,184,77,0.12), 0 22px 70px rgba(0,0,0,0.42);
+    }
+  }
+
+  @media (min-width: 900px) {
+    .app {
+      max-width: 760px;
+      padding-top: 42px;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .app {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .app-affirmation strong {
+      font-size: 18px;
+    }
+
+    .remaining {
+      padding: 28px 18px;
+    }
+
+    #cycleBar {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1065,23 +1743,28 @@
 <div class="auth-screen" id="welcomeScreen" style="display:none;">
   <div class="auth-card">
     <div class="auth-logo">avant<span>.</span>la paie</div>
-    <div class="auth-tagline">Le budget pensé pour cerveaux TDAH ✨<br>Planifie avant que la paie arrive.</div>
+    <div class="auth-tagline">Le budget pensé pour cerveaux TDAH✨ comme moi 🤪🤭<br>Planifie pour mieux prévenir avant que la paie arrive ❤️</div>
 
     <div class="auth-form">
-      <div class="auth-trial-badge">30 jours d'essai gratuit</div>
+      <div class="auth-trial-badge">Plan gratuit inclus</div>
       <h2>Bienvenue!</h2>
-      <div class="subtitle">Crée ton compte pour commencer</div>
+      <div class="subtitle">Crée ton compte pour commencer gratuitement</div>
 
       <button class="auth-btn" id="goSignupBtn">Créer un compte</button>
       <button class="auth-btn ghost" id="goLoginBtn" style="margin-top:10px;">J'ai déjà un compte</button>
     </div>
 
     <div class="auth-features">
-      <div>✓ Sources de revenus illimitées</div>
-      <div>✓ Enveloppes de dépenses illimitées</div>
-      <div>✓ Calendrier intégré</div>
+      <div>✓ 1 revenu et 5 enveloppes en gratuit</div>
+      <div>✓ PRO pour les récurrences et l'illimité</div>
+      <div>✓ Calendrier préventif intégré</div>
       <div>✓ Sauvegarde sécurisée</div>
-      <div>✓ 30 jours d'essai, sans engagement</div>
+      <div>✓ Essai PRO de 30 jours disponible</div>
+    </div>
+    <div class="legal-links">
+      <a href="presentation.html">Page de présentation</a>
+      ·
+      <a href="confidentialite.html">Politique de confidentialité</a>
     </div>
   </div>
 </div>
@@ -1092,7 +1775,7 @@
     <div class="auth-logo">avant<span>.</span>la paie</div>
     <div class="auth-form">
       <h2>Créer mon compte</h2>
-      <div class="subtitle">30 jours d'essai gratuit · annulable à tout moment</div>
+      <div class="subtitle">Plan gratuit inclus · PRO avec 30 jours d'essai</div>
 
       <div class="auth-error" id="signupError"></div>
       <div class="auth-success" id="signupSuccess"></div>
@@ -1105,11 +1788,19 @@
         <label>Mot de passe</label>
         <input type="password" class="auth-input" id="signupPassword" placeholder="8 caractères minimum" autocomplete="new-password">
       </div>
+      <div class="auth-field">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" class="auth-input" id="signupPasswordConfirm" placeholder="Retape le même mot de passe" autocomplete="new-password">
+      </div>
 
       <button class="auth-btn" id="signupSubmitBtn">Créer mon compte</button>
 
       <div class="auth-switch">
         Déjà un compte? <a id="switchToLogin">Se connecter</a>
+      </div>
+      <div class="legal-links">
+        En créant un compte, tu confirmes avoir lu la
+        <a href="confidentialite.html">politique de confidentialité</a>.
       </div>
     </div>
   </div>
@@ -1142,25 +1833,36 @@
       <div class="auth-switch" style="margin-top:8px;">
         <a id="forgotPassword" style="font-size:12px;">Mot de passe oublié?</a>
       </div>
+      <div class="legal-links">
+        <a href="confidentialite.html">Politique de confidentialité</a>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ÉCRAN PRO (page abonnement) -->
 <div class="auth-screen" id="proScreen" style="display:none;">
-  <div class="auth-card" style="max-width: 480px;">
+  <div class="auth-card" style="max-width: 560px;">
     <button class="auth-btn ghost" id="proBackBtn" style="margin-bottom:20px; padding:8px 16px; font-size:14px; width:auto; display:inline-block;">← Retour</button>
 
     <div class="auth-logo" style="margin-bottom: 8px;">Passer à <span>PRO</span> ✨</div>
-    <div class="auth-tagline">30 jours d'essai gratuit. Annule à tout moment.</div>
+    <div class="auth-tagline">Choisis l'option qui respecte ton rythme.</div>
 
-    <!-- Plan Annuel (mis en avant) -->
+    <!-- Acces a vie (mis en avant) -->
     <div class="auth-form" style="border-color: var(--accent); position: relative; margin-bottom: 14px;">
-      <div style="position: absolute; top: -12px; left: 22px; background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;">ÉCONOMISE 33 %</div>
+      <div style="position: absolute; top: -12px; left: 22px; background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;">UNE SEULE FOIS</div>
+      <h2 style="margin-bottom: 4px;">Accès à vie ✨</h2>
+      <div style="font-size: 36px; font-weight: 800; font-style: italic; color: var(--accent); letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">39,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">une seule fois</span></div>
+      <div class="subtitle" style="margin-bottom: 16px;">Même accès que PRO · sans renouvellement</div>
+      <button class="auth-btn" id="subscribeLifetimeBtn">Obtenir l'accès à vie</button>
+    </div>
+
+    <!-- Plan Annuel -->
+    <div class="auth-form" style="margin-bottom: 14px;">
       <h2 style="margin-bottom: 4px;">Annuel</h2>
-      <div style="font-size: 36px; font-weight: 800; font-style: italic; color: var(--accent); letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">39,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">/ an</span></div>
-      <div class="subtitle" style="margin-bottom: 16px;">Soit 3,33 $/mois · 30 jours gratuits</div>
-      <button class="auth-btn" id="subscribeYearlyBtn">Commencer l'essai gratuit</button>
+      <div style="font-size: 30px; font-weight: 700; font-style: italic; letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">29,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">/ an</span></div>
+      <div class="subtitle" style="margin-bottom: 16px;">Soit 2,50 $/mois · 30 jours gratuits</div>
+      <button class="auth-btn ghost" id="subscribeYearlyBtn">Commencer l'essai gratuit</button>
     </div>
 
     <!-- Plan Mensuel -->
@@ -1173,8 +1875,8 @@
 
     <div class="auth-features" style="margin-top: 24px;">
       <div style="margin-bottom: 8px; color: var(--ink); font-weight: 600;">Inclus dans PRO :</div>
-      <div>✓ Sources de revenus illimitées</div>
-      <div>✓ Enveloppes de dépenses illimitées</div>
+      <div>✓ Plusieurs sources de revenus</div>
+      <div>✓ Autant d'enveloppes de dépenses que nécessaire</div>
       <div>✓ Sauvegarde automatique dans le nuage</div>
       <div>✓ Synchronisation entre tous tes appareils</div>
       <div>✓ Calendrier intégré</div>
@@ -1182,7 +1884,42 @@
     </div>
 
     <div class="auth-switch" style="margin-top: 20px; font-size: 12px;">
-      Paiement sécurisé par Stripe · Tu peux annuler à tout moment
+      Paiement sécurisé par Stripe · Abonnement ou accès à vie
+    </div>
+  </div>
+</div>
+
+<!-- ÉCRAN FACTURATION -->
+<div class="auth-screen" id="billingScreen" style="display:none;">
+  <div class="auth-card" style="max-width: 620px;">
+    <button class="auth-btn ghost" id="billingBackBtn" style="margin-bottom:20px; padding:8px 16px; font-size:14px; width:auto; display:inline-block;">← Retour</button>
+
+    <div class="auth-logo" style="margin-bottom: 8px;">Facturation <span>et abonnement</span></div>
+    <div class="auth-tagline" id="billingCurrentPlan">Chargement du statut...</div>
+
+    <div class="auth-form" style="margin-bottom: 14px;">
+      <h2 style="margin-bottom: 8px;">Changer mon accès</h2>
+      <div class="subtitle" style="margin-bottom: 16px;">
+        Tu peux passer d'un abonnement à l'autre ou choisir l'accès à vie. Les changements récurrents sont faits directement dans Stripe.
+      </div>
+
+      <div style="display:grid; gap:10px;">
+        <button class="auth-btn ghost" id="billingMonthlyBtn">PRO mensuel · 4,99 $/mois</button>
+        <button class="auth-btn ghost" id="billingYearlyBtn">PRO annuel · 29,99 $/an</button>
+        <button class="auth-btn" id="billingLifetimeBtn">Accès à vie · 39,99 $ une seule fois ✨</button>
+      </div>
+    </div>
+
+    <div class="auth-form" style="margin-bottom: 14px;">
+      <h2 style="margin-bottom: 8px;">Gérer avec Stripe</h2>
+      <div class="subtitle" style="margin-bottom: 16px;">
+        Pour annuler un abonnement, voir tes factures ou modifier ta carte, ouvre le portail sécurisé Stripe.
+      </div>
+      <button class="auth-btn ghost" id="billingPortalBtn">Ouvrir le portail Stripe</button>
+    </div>
+
+    <div class="auth-switch" style="margin-top: 20px; font-size: 12px;">
+      Les paiements sont sécurisés par Stripe. L'accès à vie n'a pas de renouvellement.
     </div>
   </div>
 </div>
@@ -1195,7 +1932,6 @@
       <div class="logo">avant<span>.</span>la paie</div>
       <div style="display:flex; align-items:center; gap:14px;">
         <div class="date" id="todayDate"></div>
-        <button class="view-toggle-btn" id="viewToggleBtn" title="Basculer vue">📅</button>
         <div class="user-menu">
           <button class="user-btn" id="userBtn">U</button>
           <div class="user-dropdown" id="userDropdown">
@@ -1204,12 +1940,29 @@
               <div class="user-plan" id="userPlan">⏳ Essai · 30 jours restants</div>
             </div>
             <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
+            <button id="manageBillingBtn">Facturation et abonnement</button>
+            <button id="enableNotificationsBtn">Activer les rappels</button>
             <button class="danger" id="logoutBtn">Déconnexion</button>
           </div>
         </div>
       </div>
     </div>
   </header>
+
+  <div class="app-affirmation">
+    <span class="kicker">Calme financier</span>
+    <strong>Chaque petite décision te rapproche du calme.</strong>
+    <span>Bravo ✨ tu avances à ton rythme.</span>
+  </div>
+
+  <button class="upcoming-card" id="upcomingBtn" data-action="open-upcoming" type="button">
+    <span class="upcoming-card-icon">📅</span>
+    <span class="upcoming-card-copy">
+      <span class="upcoming-card-title">Calendrier préventif</span>
+      <span class="upcoming-card-sub" id="upcomingCardSub">Aucun paiement daté</span>
+    </span>
+    <span class="upcoming-card-arrow">›</span>
+  </button>
 
   <!-- BARRE D'ACTIONS RAPIDES -->
   <div id="cycleBar" style="display:none; background: linear-gradient(140deg, rgba(255,137,6,0.10), var(--surface)); border: 1px solid rgba(255,137,6,0.25); border-radius: 14px; padding: 12px 16px; margin-bottom: 18px; display:flex; align-items:center; gap:12px;">
@@ -1221,8 +1974,6 @@
     </button>
   </div>
 
-  <!-- VUE PRINCIPALE (revenus + enveloppes) -->
-  <div id="viewMain">
   <!-- REVENUS -->
   <div class="section-title">
     <h2>Mes revenus</h2>
@@ -1247,6 +1998,16 @@
     <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
   </div>
 
+  <!-- FONDS BONHEUR -->
+  <div class="section-title">
+    <h2>✨ Fonds bonheur</h2>
+    <span id="savingsCount">0 $ réservé</span>
+  </div>
+
+  <div id="savingsList"></div>
+
+  <button class="add-inline purple" id="addSavingBtn">+ Ajouter un fonds bonheur</button>
+
   <!-- ENVELOPPES -->
   <div class="section-title">
     <h2>Mes enveloppes</h2>
@@ -1258,30 +2019,7 @@
   <button class="add-inline orange" id="addEnvBtn">+ Ajouter une enveloppe de dépense</button>
 
   <a class="reset-link" id="resetBtn">Tout réinitialiser</a>
-  </div><!-- /viewMain -->
-
-  <!-- VUE CALENDRIER -->
-  <div id="viewCalendar" style="display:none;">
-    <div class="cal-header">
-      <button class="cal-nav-btn" id="calPrevBtn">‹</button>
-      <div class="cal-month-title" id="calMonthTitle">mai 2026</div>
-      <button class="cal-nav-btn" id="calNextBtn">›</button>
-    </div>
-
-    <div class="cal-weekdays">
-      <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
-    </div>
-
-    <div class="cal-grid" id="calGrid"></div>
-
-    <div class="cal-list-header">
-      <h2 id="calSelectedTitle">Prochains paiements</h2>
-    </div>
-
-    <div id="calList"></div>
-  </div><!-- /viewCalendar -->
-
-</div><!-- /mainApp -->
+</div>
 
 <!-- Modal -->
 <div class="modal-bg" id="modal">
@@ -1304,7 +2042,7 @@
         <input type="number" id="itemAmount" placeholder="0" inputmode="decimal" step="0.01">
       </div>
       <div class="field" id="dateField">
-        <label>Date prévue</label>
+        <label id="dateLabel">Date prévue</label>
         <button type="button" class="date-trigger empty" id="itemDateBtn">
           <span>📅</span>
           <span id="itemDateLabel">Choisir une date</span>
@@ -1313,7 +2051,12 @@
       </div>
     </div>
 
-    <div class="field">
+    <div class="field" id="targetField" style="display:none;">
+      <label id="targetLabel">Objectif total</label>
+      <input type="number" id="itemTarget" placeholder="Optionnel" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="field" id="recurrenceField">
       <label>Fréquence</label>
       <div class="recurrence-pick" id="recurrencePick">
         <button type="button" data-rec="once" class="rec-btn sel">Une seule fois</button>
@@ -1335,6 +2078,17 @@
       <button class="btn btn-danger" id="deleteBtn" style="display:none;">Supprimer</button>
       <button class="btn btn-primary" id="saveBtn">Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<!-- Aperçu paiements à venir -->
+<div class="upcoming-overlay" id="upcomingOverlay">
+  <div class="upcoming-popup">
+    <div class="upcoming-head">
+      <h3>Paiements à venir</h3>
+      <button class="upcoming-close" id="upcomingClose" aria-label="Fermer">×</button>
+    </div>
+    <div class="upcoming-list" id="upcomingList"></div>
   </div>
 </div>
 
@@ -1362,11 +2116,14 @@
 
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+<script src="config.js?v=30"></script>
+<script src="firebase-config.js?v=2"></script>
+<script src="app.js?v=36"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=41').catch(() => {});
   }
 </script>
 </body>
