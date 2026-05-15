@@ -64,7 +64,8 @@ const FREE_LIMITS = {
 let state = {
   revenus: [],
   envelopes: [],
-  savings: []
+  savings: [],
+  adjustments: []
 };
 
 let editing = { type: null, id: null };
@@ -523,7 +524,7 @@ async function signOut() {
   await supabaseClient.auth.signOut();
   currentUser = null;
   currentSubscription = null;
-  state = { revenus: [], envelopes: [], savings: [] };
+  state = { revenus: [], envelopes: [], savings: [], adjustments: [] };
   showScreen('welcomeScreen');
 }
 
@@ -611,6 +612,21 @@ async function loadUserData() {
       }));
     } else {
       state.savings = [];
+    }
+    // Charger ajustements manuels du reste a allouer
+    const { data: adjustments, error: adjustErr } = await supabaseClient
+      .from('budget_adjustments')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (!adjustErr && adjustments) {
+      state.adjustments = adjustments.map(normalizeBudgetAdjustment);
+    } else {
+      state.adjustments = [];
+      if (adjustErr && !String(adjustErr.message || '').includes('does not exist')) {
+        console.warn('Erreur chargement ajustements:', adjustErr);
+      }
     }
   } catch (e) {
     console.error('Erreur chargement données:', e);
@@ -779,6 +795,52 @@ async function deleteSaving(id) {
 // ============================================================
 // UTILITAIRES
 // ============================================================
+function normalizeBudgetAdjustment(a) {
+  return {
+    id: a.id,
+    user_id: a.user_id,
+    new_amount: parseFloat(a.new_amount) || 0,
+    previous_amount: parseFloat(a.previous_amount) || 0,
+    difference: parseFloat(a.difference) || 0,
+    note: a.note || '',
+    cycle_reset: Boolean(a.cycle_reset),
+    created_at: a.created_at || new Date().toISOString()
+  };
+}
+
+async function saveBudgetAdjustment(adjustment, options = {}) {
+  if (!currentUser) return null;
+
+  const payload = {
+    user_id: currentUser.id,
+    new_amount: adjustment.new_amount,
+    previous_amount: adjustment.previous_amount,
+    difference: adjustment.difference,
+    note: adjustment.note || null,
+    cycle_reset: Boolean(adjustment.cycle_reset)
+  };
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('budget_adjustments')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const normalized = normalizeBudgetAdjustment(data);
+    state.adjustments = [normalized, ...(state.adjustments || [])].slice(0, 40);
+    return normalized;
+  } catch (e) {
+    console.error('Erreur sauvegarde ajustement:', e);
+    if (!options.silent) {
+      alert('Erreur de sauvegarde : ' + e.message);
+    }
+    return null;
+  }
+}
+
 function fmt(n) {
   if (isNaN(n)) n = 0;
   return new Intl.NumberFormat('fr-CA', {
@@ -786,6 +848,11 @@ function fmt(n) {
     currency: 'CAD',
     maximumFractionDigits: 2
   }).format(n);
+}
+
+function fmtSigned(n) {
+  const value = parseFloat(n) || 0;
+  return `${value > 0 ? '+' : ''}${fmt(value)}`;
 }
 
 function escapeHtml(s) {
@@ -1159,6 +1226,134 @@ function getRecurrenceLabel(rec) {
 }
 
 // Compte combien d'éléments sont récurrents
+function getPayPeriodInfo() {
+  const periods = {
+    weekly: { days: 7, label: 'hebdo' },
+    biweekly: { days: 14, label: 'aux 2 semaines' },
+    monthly: { days: 30, label: 'mensuel' },
+    quarterly: { days: 90, label: 'aux 3 mois' },
+    yearly: { days: 365, label: 'annuel' }
+  };
+
+  const recurringRevenues = state.revenus
+    .filter(r => r.recurrence && r.recurrence !== 'once' && periods[r.recurrence])
+    .map(r => periods[r.recurrence])
+    .sort((a, b) => a.days - b.days);
+
+  return recurringRevenues[0] || periods.monthly;
+}
+
+function getBaseRemainingAmount() {
+  const totalRevenus = state.revenus.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+  const totalAlloc = state.envelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalSavings = state.savings.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
+  return totalRevenus - totalAlloc - totalSavings;
+}
+
+function getManualAdjustmentOffset() {
+  return (state.adjustments || []).reduce((sum, item) => sum + (parseFloat(item.difference) || 0), 0);
+}
+
+function getAdjustedRemainingAmount() {
+  return getBaseRemainingAmount() + getManualAdjustmentOffset();
+}
+
+function formatAdjustmentDate(dateStr) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  return d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' });
+}
+
+function renderAdjustmentsHistory() {
+  const box = document.getElementById('adjustmentsHistory');
+  const meta = document.getElementById('remainingAdjustMeta');
+  if (!box || !meta) return;
+
+  const offset = getManualAdjustmentOffset();
+  if (Math.abs(offset) >= 0.005) {
+    meta.style.display = 'block';
+    meta.textContent = `Ajustement manuel actif : ${fmtSigned(offset)}`;
+  } else {
+    meta.style.display = 'none';
+    meta.textContent = '';
+  }
+
+  const rows = (state.adjustments || [])
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 3);
+
+  if (rows.length === 0) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  box.style.display = 'grid';
+  box.innerHTML = rows.map(row => {
+    const note = row.cycle_reset
+      ? 'Nouveau cycle'
+      : (row.note ? escapeHtml(row.note) : 'Ajustement manuel');
+    const icon = row.cycle_reset ? '🔄' : '✏️';
+    const amount = row.cycle_reset ? 'ajustement remis à zéro' : fmtSigned(row.difference);
+    return `
+      <div class="adjustment-row">
+        <span>${icon}</span>
+        <span><strong>${amount}</strong> (${note}) · ${formatAdjustmentDate(row.created_at)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function openAdjustmentModal() {
+  const modal = document.getElementById('adjustModal');
+  if (!modal) return;
+
+  const current = getAdjustedRemainingAmount();
+  document.getElementById('adjustCurrentAmount').textContent = fmt(current);
+  document.getElementById('adjustAmount').value = current.toFixed(2);
+  document.getElementById('adjustNote').value = '';
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('adjustAmount')?.focus(), 80);
+}
+
+function closeAdjustmentModal() {
+  document.getElementById('adjustModal')?.classList.remove('show');
+}
+
+async function saveManualAdjustment() {
+  const amountInput = document.getElementById('adjustAmount');
+  const noteInput = document.getElementById('adjustNote');
+  const newAmount = parseFloat(amountInput.value);
+
+  if (Number.isNaN(newAmount)) {
+    alert('Entre le nouveau montant exact du reste à allouer.');
+    return;
+  }
+
+  const previousAmount = getAdjustedRemainingAmount();
+  const difference = newAmount - previousAmount;
+  const btn = document.getElementById('adjustSaveBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde...';
+
+  const saved = await saveBudgetAdjustment({
+    new_amount: newAmount,
+    previous_amount: previousAmount,
+    difference,
+    note: noteInput.value.trim(),
+    cycle_reset: false
+  });
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (saved) {
+    closeAdjustmentModal();
+    render();
+  }
+}
+
 function countRecurrent() {
   const recRev = state.revenus.filter(r => r.recurrence && r.recurrence !== 'once').length;
   const recEnv = state.envelopes.filter(e => e.recurrence && e.recurrence !== 'once').length;
@@ -1177,6 +1372,8 @@ async function renewCycle() {
 
   try {
     // Renouveler revenus récurrents
+    const previousAdjustedAmount = getAdjustedRemainingAmount();
+    const activeAdjustmentOffset = getManualAdjustmentOffset();
     for (const r of state.revenus) {
       if (r.recurrence && r.recurrence !== 'once') {
         r.received = false;
@@ -1196,13 +1393,19 @@ async function renewCycle() {
         await saveEnvelope(e, false);
       }
     }
+    await saveBudgetAdjustment({
+      previous_amount: previousAdjustedAmount,
+      new_amount: previousAdjustedAmount - activeAdjustmentOffset,
+      difference: -activeAdjustmentOffset,
+      note: 'Nouveau cycle',
+      cycle_reset: true
+    }, { silent: true });
     render();
   } catch (err) {
     alert('Erreur : ' + err.message);
   }
-
   btn.disabled = false;
-  btn.textContent = '🔄 Nouveau cycle';
+  btn.textContent = `🔄 Nouveau cycle (${getPayPeriodInfo().label})`;
 }
 
 // Avancer une date selon la récurrence
@@ -1237,8 +1440,12 @@ function render() {
   const recCount = countRecurrent();
   const cycleBar = document.getElementById('cycleBar');
   const cycleText = document.getElementById('cycleBarText');
+  const cycleBtn = document.getElementById('newCycleBtn');
   if (recCount > 0) {
     cycleBar.style.display = 'flex';
+    if (cycleBtn && !cycleBtn.disabled) {
+      cycleBtn.textContent = `🔄 Nouveau cycle (${getPayPeriodInfo().label})`;
+    }
     cycleText.textContent = recCount === 1
       ? `Tu as 1 élément récurrent`
       : `Tu as ${recCount} éléments récurrents`;
@@ -1367,7 +1574,8 @@ function render() {
   const totalAlloc = state.envelopes.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
   const totalSavings = state.savings.reduce((s,item) => s + (parseFloat(item.amount)||0), 0);
   const totalReserved = totalAlloc + totalSavings;
-  const remain = totalRevenus - totalReserved;
+  const baseRemain = totalRevenus - totalReserved;
+  const remain = baseRemain + getManualAdjustmentOffset();
 
   const amountEl = document.getElementById('remainingAmount');
   const subEl = document.getElementById('remainingSub');
@@ -1392,6 +1600,7 @@ function render() {
 
   const pct = totalRevenus > 0 ? Math.min(100, (totalReserved / totalRevenus) * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
+  renderAdjustmentsHistory();
 
   // Fonds bonheur
   const savingsBox = document.getElementById('savingsList');
@@ -2177,7 +2386,10 @@ document.getElementById('deleteBtn').onclick = async () => {
 document.body.addEventListener('click', async e => {
   const t = e.target.closest('button');
   if (!t) return;
-  if (t.dataset.action === 'open-upcoming' || t.id === 'upcomingBtn') {
+  if (t.dataset.action === 'open-adjustment') {
+    openAdjustmentModal();
+    return;
+  } else if (t.dataset.action === 'open-upcoming' || t.id === 'upcomingBtn') {
     openUpcomingPopup();
     return;
   } else if (t.dataset.action === 'upcoming-prev') {
@@ -2233,6 +2445,12 @@ document.getElementById('upcomingOverlay').addEventListener('click', e => {
   if (e.target.id === 'upcomingOverlay') closeUpcomingPopup();
 });
 
+document.getElementById('adjustCancelBtn')?.addEventListener('click', closeAdjustmentModal);
+document.getElementById('adjustSaveBtn')?.addEventListener('click', saveManualAdjustment);
+document.getElementById('adjustModal')?.addEventListener('click', e => {
+  if (e.target.id === 'adjustModal') closeAdjustmentModal();
+});
+
 document.getElementById('resetBtn').onclick = async () => {
   if (!confirm('Effacer TOUTES tes données et recommencer à zéro? Cette action est irréversible.')) return;
 
@@ -2240,7 +2458,8 @@ document.getElementById('resetBtn').onclick = async () => {
     await supabaseClient.from('revenus').delete().eq('user_id', currentUser.id);
     await supabaseClient.from('envelopes').delete().eq('user_id', currentUser.id);
     await supabaseClient.from('savings').delete().eq('user_id', currentUser.id);
-    state = { revenus: [], envelopes: [], savings: [] };
+    await supabaseClient.from('budget_adjustments').delete().eq('user_id', currentUser.id);
+    state = { revenus: [], envelopes: [], savings: [], adjustments: [] };
     render();
   } catch (e) {
     alert('Erreur : ' + e.message);

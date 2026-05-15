@@ -645,6 +645,87 @@
     color: var(--ink-soft);
     font-style: italic;
   }
+  .remaining-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .remaining-title-row .label {
+    margin-bottom: 0;
+  }
+  .remaining-edit {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,184,77,0.24);
+    background: rgba(255,184,77,0.08);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .remaining-edit:hover,
+  .remaining-edit:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(255,184,77,0.48);
+    background: rgba(255,184,77,0.16);
+    outline: none;
+  }
+  .remaining-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .adjust-meta {
+    margin-top: 10px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .adjustments-history {
+    margin-top: 14px;
+    display: grid;
+    gap: 7px;
+  }
+  .adjustment-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.035);
+    color: var(--ink-soft);
+    font-family: var(--font-ui, system-ui, sans-serif);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .adjustment-row strong {
+    color: var(--ink);
+  }
+  .adjust-help,
+  .adjust-current {
+    color: var(--ink-soft);
+    font-family: var(--font-ui, system-ui, sans-serif);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .adjust-current {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.035);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 14px 0 16px;
+  }
+  .adjust-current strong {
+    color: var(--accent);
+  }
   .progress-bar {
     height: 6px;
     background: rgba(255,255,254,0.06);
@@ -2046,10 +2127,17 @@
 
   <!-- RESTE -->
   <div class="remaining">
-    <div class="label">Reste à allouer</div>
-    <div class="amount" id="remainingAmount">0 $</div>
+    <div class="remaining-title-row">
+      <div class="label">Reste à allouer</div>
+      <button class="remaining-edit" type="button" data-action="open-adjustment" aria-label="Ajuster le reste à allouer">✏️</button>
+    </div>
+    <div class="remaining-control">
+      <div class="amount" id="remainingAmount">0 $</div>
+    </div>
     <div class="sub" id="remainingSub">Commence par ajouter tes revenus ci-dessus</div>
+    <div class="adjust-meta" id="remainingAdjustMeta" style="display:none;"></div>
     <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
+    <div class="adjustments-history" id="adjustmentsHistory" style="display:none;"></div>
   </div>
 
   <!-- FONDS BONHEUR -->
@@ -2135,6 +2223,36 @@
   </div>
 </div>
 
+<!-- Ajustement manuel du reste -->
+<div class="modal-bg" id="adjustModal">
+  <div class="modal adjust-modal">
+    <h3>Ajuster le reste</h3>
+    <p class="adjust-help">
+      Entre le vrai montant qu'il te reste à répartir. Parfait pour les petites dépenses
+      du quotidien que tu ne veux pas détailler.
+    </p>
+
+    <div class="adjust-current">
+      Montant affiché en ce moment : <strong id="adjustCurrentAmount">0 $</strong>
+    </div>
+
+    <div class="field">
+      <label>Nouveau montant exact</label>
+      <input type="number" id="adjustAmount" placeholder="0" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="field">
+      <label>Pourquoi cet ajustement? <span style="opacity:.6;">Optionnel</span></label>
+      <input type="text" id="adjustNote" placeholder="ex. Petites dépenses">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="adjustCancelBtn">Annuler</button>
+      <button class="btn btn-primary" id="adjustSaveBtn">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
 <!-- Aperçu paiements à venir -->
 <div class="upcoming-overlay" id="upcomingOverlay">
   <div class="upcoming-popup">
@@ -2174,10 +2292,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=2"></script>
-<script src="app.js?v=36"></script>
+<script src="app.js?v=37"></script>
 <script>
   if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=41').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=42').catch(() => {});
   }
 </script>
 </body>
