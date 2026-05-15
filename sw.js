@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v44';
+const CACHE = 'avantlapaie-v45';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,12 @@ const ASSETS = [
   './config.js',
   './firebase-config.js',
   './manifest.json',
+  './favicon.ico',
+  './favicon-16.png',
+  './favicon-32.png',
+  './icon-120.png',
+  './icon-152.png',
+  './icon-180.png',
   './icon-192.png',
   './icon-512.png',
   './apercu-facebook.jpg',
