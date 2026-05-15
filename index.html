@@ -463,27 +463,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
-    padding: 20px 0;
+    gap: 16px;
+    padding: 8px 0 12px;
   }
   .cal-month-title {
     font-family: 'Fraunces', serif;
     font-style: italic;
     font-weight: 600;
-    font-size: 22px;
+    font-size: 18px;
     letter-spacing: -0.02em;
     text-transform: lowercase;
-    min-width: 160px;
+    min-width: 140px;
     text-align: center;
   }
   .cal-nav-btn {
     background: transparent;
     border: 1px solid var(--line);
     color: var(--ink);
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    font-size: 22px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 18px;
     line-height: 1;
     cursor: pointer;
     font-family: 'Fraunces', serif;
@@ -493,31 +493,32 @@
   .cal-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 0 4px 8px;
+    gap: 2px;
+    padding: 0 2px 4px;
   }
   .cal-weekdays > div {
     text-align: center;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--ink-soft);
     letter-spacing: 0.1em;
-    padding: 4px;
+    padding: 2px;
   }
   .cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 0 4px;
+    gap: 2px;
+    padding: 0 2px;
   }
   .cal-day {
     aspect-ratio: 1;
+    max-height: 42px;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: 9px;
     color: var(--ink);
     font-family: 'Fraunces', serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     position: relative;
@@ -525,6 +526,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.15s;
+    padding: 0;
   }
   .cal-day.empty {
     cursor: default;
@@ -557,35 +559,35 @@
   }
   .cal-dots {
     position: absolute;
-    bottom: 4px;
+    bottom: 2px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     gap: 2px;
   }
   .cal-dot {
-    width: 4px;
-    height: 4px;
+    width: 3px;
+    height: 3px;
     border-radius: 50%;
   }
   .cal-dot.expense { background: var(--accent); }
   .cal-dot.income { background: var(--good); }
 
   .cal-list-header {
-    margin-top: 32px;
-    padding-bottom: 12px;
+    margin-top: 20px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--line);
   }
   .cal-list-header h2 {
     font-family: 'Fraunces', serif;
     font-style: italic;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.01em;
   }
 
   .cal-day-group {
-    margin: 22px 0 4px;
+    margin: 16px 0 4px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -593,12 +595,12 @@
   .cal-day-group-title {
     font-family: 'Fraunces', serif;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     letter-spacing: -0.01em;
   }
   .cal-day-group-count {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     color: var(--ink-soft);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -607,22 +609,22 @@
   .cal-item {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px;
-    margin-top: 8px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 6px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
   .cal-item-emoji {
-    width: 38px;
-    height: 38px;
-    border-radius: 11px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
     background: rgba(255,137,6,0.10);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 17px;
     flex-shrink: 0;
   }
   .cal-item.income .cal-item-emoji {
@@ -635,12 +637,12 @@
   .cal-item-name {
     font-family: 'Fraunces', serif;
     font-weight: 600;
-    font-size: 16px;
-    margin-bottom: 2px;
+    font-size: 14px;
+    margin-bottom: 1px;
   }
   .cal-item-meta {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     color: var(--ink-soft);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -649,7 +651,7 @@
     font-family: 'Fraunces', serif;
     font-style: italic;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 14px;
     color: var(--accent);
     white-space: nowrap;
   }
@@ -660,7 +662,8 @@
     text-align: center;
     color: var(--ink-soft);
     font-style: italic;
-    padding: 40px 20px;
+    padding: 30px 20px;
+    font-size: 13px;
   }
 
   .item-actions { display: flex; gap: 6px; }
