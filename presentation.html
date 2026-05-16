@@ -1141,9 +1141,78 @@
     box-shadow: 0 0 18px rgba(255,184,77,0.12);
   }
 
+  .gallery-section {
+    padding-top: clamp(44px, 7vw, 82px);
+    padding-bottom: clamp(40px, 6vw, 74px);
+  }
+
+  .gallery-section::before {
+    content: "";
+    position: absolute;
+    inset: 4% 0 auto;
+    height: 420px;
+    pointer-events: none;
+    background:
+      radial-gradient(520px 320px at 16% 8%, rgba(96,165,250,0.18), transparent 62%),
+      radial-gradient(520px 340px at 88% 12%, rgba(251,191,36,0.10), transparent 68%);
+    opacity: 0.8;
+  }
+
+  .gallery-head {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin-bottom: clamp(24px, 4vw, 38px);
+  }
+
+  .gallery-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(16px, 2vw, 24px);
+  }
+
+  .gallery-card {
+    padding: 8px;
+    border-radius: 28px;
+    background:
+      linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.035)),
+      rgba(15,23,42,0.44);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow:
+      0 28px 78px rgba(2,6,23,0.36),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(18px);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .gallery-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .gallery-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      border-color: rgba(96,165,250,0.28);
+      box-shadow:
+        0 34px 92px rgba(37,99,235,0.22),
+        inset 0 1px 0 rgba(255,255,255,0.10);
+    }
+  }
+
   @media (max-width: 1120px) {
     .floating-card {
       display: none;
+    }
+
+    .gallery-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
@@ -1193,6 +1262,27 @@
 
     .phone {
       width: min(276px, 82vw);
+    }
+
+    .gallery-section {
+      padding-inline: 16px;
+      padding-top: 38px;
+    }
+
+    .gallery-grid {
+      grid-template-columns: 1fr;
+      max-width: 430px;
+      margin-inline: auto;
+      gap: 18px;
+    }
+
+    .gallery-card {
+      border-radius: 24px;
+      padding: 7px;
+    }
+
+    .gallery-card img {
+      border-radius: 19px;
     }
   }
 
@@ -1255,7 +1345,7 @@
       </p>
       <div class="hero-actions">
         <a class="btn primary" href="index.html">Commencer gratuitement</a>
-        <a class="btn secondary" href="#comment">Découvrir l'application</a>
+        <a class="btn secondary" href="#galerie">Découvrir l'application</a>
       </div>
       <div class="micro-note">Bravo ✨ tu avances à ton rythme.</div>
     </div>
@@ -1268,6 +1358,38 @@
       </div>
     </div>
   </header>
+
+  <section class="gallery-section" id="galerie">
+    <div class="section-inner">
+      <div class="gallery-head">
+        <div class="section-kicker">Voir avant d'essayer</div>
+        <h2 class="section-title">Un aperçu de ton futur calme.</h2>
+        <p class="section-sub">
+          Quelques écrans pour sentir l'application avant même de créer ton compte.
+        </p>
+      </div>
+      <div class="gallery-grid" aria-label="Galerie d'images de l'application Avant la Paie">
+        <div class="gallery-card">
+          <img src="presentation-1.jpg" alt="Aperçu de l'application avec le résumé du budget mensuel" loading="lazy" decoding="async">
+        </div>
+        <div class="gallery-card">
+          <img src="presentation-2.jpg" alt="Écran de création des enveloppes de dépenses" loading="lazy" decoding="async">
+        </div>
+        <div class="gallery-card">
+          <img src="presentation-3.jpg" alt="Calendrier financier avec paiements à venir" loading="lazy" decoding="async">
+        </div>
+        <div class="gallery-card">
+          <img src="presentation-4.jpg" alt="Liste des enveloppes de dépenses et progression du budget" loading="lazy" decoding="async">
+        </div>
+        <div class="gallery-card">
+          <img src="presentation-5.jpg" alt="Rappels intelligents pour les paiements à venir" loading="lazy" decoding="async">
+        </div>
+        <div class="gallery-card">
+          <img src="presentation-6.jpg" alt="Vue détaillée pour créer des enveloppes personnalisées" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section id="comment">
     <div class="section-inner">
