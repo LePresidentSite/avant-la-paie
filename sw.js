@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v56';
+const CACHE = 'avantlapaie-v57';
 const ASSETS = [
   './',
   './index.html',
@@ -19,9 +19,6 @@ const ASSETS = [
   './icon-512.png',
   './apercu-facebook.jpg',
   './apercu-application-reelle.jpeg',
-  './presentation-1.jpg',
-  './presentation-2.jpg',
-  './presentation-3.jpg',
   './presentation-4.jpg',
   './presentation-5.jpg',
   './presentation-6.jpg'
