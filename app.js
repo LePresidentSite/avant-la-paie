@@ -355,7 +355,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=41');
+    const registration = await navigator.serviceWorker.register('sw.js?v=43');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -918,6 +918,26 @@ function addRecurrenceInterval(date, recurrence, anchorDay = date.getDate()) {
   }
 }
 
+function subtractRecurrenceInterval(date, recurrence, anchorDay = date.getDate()) {
+  const d = new Date(date);
+  switch (recurrence) {
+    case 'weekly':
+      d.setDate(d.getDate() - 7);
+      return d;
+    case 'biweekly':
+      d.setDate(d.getDate() - 14);
+      return d;
+    case 'monthly':
+      return addMonthsClamped(d, -1, anchorDay);
+    case 'quarterly':
+      return addMonthsClamped(d, -3, anchorDay);
+    case 'yearly':
+      return addMonthsClamped(d, -12, anchorDay);
+    default:
+      return null;
+  }
+}
+
 function getUpcomingLimitDate() {
   const limit = new Date();
   limit.setHours(0, 0, 0, 0);
@@ -1228,26 +1248,132 @@ function getRecurrenceLabel(rec) {
 // Compte combien d'éléments sont récurrents
 function getPayPeriodInfo() {
   const periods = {
-    weekly: { days: 7, label: 'hebdo' },
-    biweekly: { days: 14, label: 'aux 2 semaines' },
-    monthly: { days: 30, label: 'mensuel' },
-    quarterly: { days: 90, label: 'aux 3 mois' },
-    yearly: { days: 365, label: 'annuel' }
+    weekly: { rank: 1, label: 'hebdo' },
+    biweekly: { rank: 2, label: 'aux 2 semaines' },
+    monthly: { rank: 3, label: 'mensuel' },
+    quarterly: { rank: 4, label: 'aux 3 mois' },
+    yearly: { rank: 5, label: 'annuel' }
   };
 
   const recurringRevenues = state.revenus
-    .filter(r => r.recurrence && r.recurrence !== 'once' && periods[r.recurrence])
-    .map(r => periods[r.recurrence])
-    .sort((a, b) => a.days - b.days);
+    .filter(r => r.recurrence && r.recurrence !== 'once' && periods[r.recurrence] && parseLocalDate(r.date))
+    .map(r => ({ ...periods[r.recurrence], recurrence: r.recurrence, revenu: r }))
+    .sort((a, b) => a.rank - b.rank);
 
-  return recurringRevenues[0] || periods.monthly;
+  return recurringRevenues[0] || { ...periods.monthly, recurrence: 'monthly', revenu: null };
+}
+
+function getCurrentPayPeriod() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const info = getPayPeriodInfo();
+
+  if (!info.revenu || info.recurrence === 'monthly') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return { start, end, nextStart: null, source: info.revenu || null, recurrence: 'monthly', label: 'mensuel' };
+  }
+
+  const anchor = parseLocalDate(info.revenu.date);
+  const anchorDay = anchor.getDate();
+  let start = new Date(anchor);
+  let guard = 0;
+
+  while (today < start && guard < 500) {
+    const previous = subtractRecurrenceInterval(start, info.recurrence, anchorDay);
+    if (!previous || previous >= start) break;
+    start = previous;
+    guard++;
+  }
+
+  let nextStart = addRecurrenceInterval(start, info.recurrence, anchorDay);
+  while (nextStart && nextStart <= today && guard < 500) {
+    start = nextStart;
+    nextStart = addRecurrenceInterval(start, info.recurrence, anchorDay);
+    guard++;
+  }
+
+  const end = nextStart ? new Date(nextStart) : new Date(start);
+  end.setDate(end.getDate() - 1);
+
+  return { start, end, nextStart, source: info.revenu, recurrence: info.recurrence, label: info.label };
+}
+
+function getPayPeriodDisplayLabel(period) {
+  switch (period?.recurrence) {
+    case 'weekly': return 'Cette semaine';
+    case 'biweekly': return 'Cette quinzaine';
+    case 'monthly': return 'Ce mois';
+    case 'quarterly': return 'Cette période de 3 mois';
+    case 'yearly': return 'Cette année';
+    default: return 'Période';
+  }
+}
+
+function getFirstOccurrenceInPeriod(item, period) {
+  if (!item.date) return { date: null, noDate: true };
+  const recurrence = item.recurrence || 'once';
+  const startDate = parseLocalDate(item.date);
+  if (!startDate) return null;
+
+  if (recurrence === 'once') {
+    return startDate >= period.start && startDate <= period.end
+      ? { date: isoDate(startDate), noDate: false }
+      : null;
+  }
+
+  let current = new Date(startDate);
+  const anchorDay = startDate.getDate();
+  let guard = 0;
+
+  while (current < period.start && guard < 500) {
+    const next = addRecurrenceInterval(current, recurrence, anchorDay);
+    if (!next || next <= current) break;
+    current = next;
+    guard++;
+  }
+
+  while (current > period.start && guard < 500) {
+    const previous = subtractRecurrenceInterval(current, recurrence, anchorDay);
+    if (!previous || previous >= current || previous < period.start) break;
+    current = previous;
+    guard++;
+  }
+
+  return current >= period.start && current <= period.end
+    ? { date: isoDate(current), noDate: false }
+    : null;
+}
+
+function itemOccursInPeriod(item, period) {
+  return Boolean(getFirstOccurrenceInPeriod(item, period));
+}
+
+function getCurrentPeriodBudget() {
+  const period = getCurrentPayPeriod();
+  const revenus = state.revenus.filter(item => itemOccursInPeriod(item, period));
+  const envelopes = state.envelopes.filter(item => itemOccursInPeriod(item, period));
+  const savings = state.savings.filter(item => itemOccursInPeriod(item, period));
+  const totalRevenus = revenus.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+  const totalAlloc = envelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalSavings = savings.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
+  const totalReserved = totalAlloc + totalSavings;
+
+  return {
+    period,
+    revenus,
+    envelopes,
+    savings,
+    totalRevenus,
+    totalAlloc,
+    totalSavings,
+    totalReserved,
+    baseRemain: totalRevenus - totalReserved
+  };
 }
 
 function getBaseRemainingAmount() {
-  const totalRevenus = state.revenus.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-  const totalAlloc = state.envelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-  const totalSavings = state.savings.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
-  return totalRevenus - totalAlloc - totalSavings;
+  return getCurrentPeriodBudget().baseRemain;
 }
 
 function getManualAdjustmentOffset() {
@@ -1506,8 +1632,9 @@ function render() {
     }
   }
 
-  // Total revenus
-  const totalRevenus = state.revenus.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+  // Total revenus de la periode de paie courante
+  const periodBudget = getCurrentPeriodBudget();
+  const totalRevenus = periodBudget.totalRevenus;
   const receivedCount = state.revenus.filter(r => r.received).length;
 
   document.getElementById('revenusCount').textContent =
@@ -1571,14 +1698,18 @@ function render() {
   });
 
   // Reste à allouer
-  const totalAlloc = state.envelopes.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
-  const totalSavings = state.savings.reduce((s,item) => s + (parseFloat(item.amount)||0), 0);
-  const totalReserved = totalAlloc + totalSavings;
-  const baseRemain = totalRevenus - totalReserved;
+  const totalAlloc = periodBudget.totalAlloc;
+  const totalSavings = periodBudget.totalSavings;
+  const totalReserved = periodBudget.totalReserved;
+  const baseRemain = periodBudget.baseRemain;
   const remain = baseRemain + getManualAdjustmentOffset();
 
   const amountEl = document.getElementById('remainingAmount');
   const subEl = document.getElementById('remainingSub');
+  const periodEl = document.getElementById('payPeriodMeta');
+  if (periodEl) {
+    periodEl.textContent = `${getPayPeriodDisplayLabel(periodBudget.period)} : ${formatDateShort(isoDate(periodBudget.period.start))} → ${formatDateShort(isoDate(periodBudget.period.end))}`;
+  }
   amountEl.textContent = fmt(remain);
   amountEl.classList.remove('good','warn','over');
 

@@ -687,6 +687,21 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+  .pay-period-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.035);
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .adjustments-history {
     margin-top: 14px;
     display: grid;
@@ -2135,6 +2150,7 @@
       <div class="amount" id="remainingAmount">0 $</div>
     </div>
     <div class="sub" id="remainingSub">Commence par ajouter tes revenus ci-dessus</div>
+    <div class="pay-period-meta" id="payPeriodMeta">Période en cours</div>
     <div class="adjust-meta" id="remainingAdjustMeta" style="display:none;"></div>
     <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
     <div class="adjustments-history" id="adjustmentsHistory" style="display:none;"></div>
@@ -2292,10 +2308,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=2"></script>
-<script src="app.js?v=37"></script>
+<script src="app.js?v=38"></script>
 <script>
   if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=42').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=43').catch(() => {});
   }
 </script>
 </body>
