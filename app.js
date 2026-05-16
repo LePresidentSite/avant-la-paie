@@ -355,7 +355,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=44');
+    const registration = await navigator.serviceWorker.register('sw.js?v=45');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -1322,21 +1322,18 @@ function getFirstOccurrenceInPeriod(item, period) {
       : null;
   }
 
+  if (startDate > period.end) return null;
+
   let current = new Date(startDate);
   const anchorDay = startDate.getDate();
   let guard = 0;
 
+  // Une recurrence commence a sa date originale. On avance seulement vers le futur,
+  // sinon un revenu futur pourrait etre compte dans la periode courante.
   while (current < period.start && guard < 500) {
     const next = addRecurrenceInterval(current, recurrence, anchorDay);
     if (!next || next <= current) break;
     current = next;
-    guard++;
-  }
-
-  while (current > period.start && guard < 500) {
-    const previous = subtractRecurrenceInterval(current, recurrence, anchorDay);
-    if (!previous || previous >= current || previous < period.start) break;
-    current = previous;
     guard++;
   }
 
