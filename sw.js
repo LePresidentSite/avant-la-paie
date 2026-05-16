@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v51';
+const CACHE = 'avantlapaie-v52';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './app.js',
   './config.js',
   './firebase-config.js',
+  './pensees-avant-la-paie.js',
   './manifest.json',
   './favicon.ico',
   './favicon-16.png',

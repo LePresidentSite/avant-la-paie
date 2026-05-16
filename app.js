@@ -355,7 +355,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=45');
+    const registration = await navigator.serviceWorker.register('sw.js?v=46');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -865,6 +865,29 @@ function formatDateShort(dStr) {
   if (!dStr) return '';
   const d = new Date(dStr + 'T00:00:00');
   return d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' });
+}
+
+function getDailyThought() {
+  const thoughts = Array.isArray(window.PENSEES) ? window.PENSEES : [];
+  if (!thoughts.length) return null;
+
+  const reference = new Date(2026, 0, 1);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysElapsed = Math.floor((today - reference) / 86400000);
+  const index = ((daysElapsed % thoughts.length) + thoughts.length) % thoughts.length;
+
+  return thoughts[index];
+}
+
+function renderDailyThought() {
+  const thought = getDailyThought();
+  if (!thought) return;
+
+  const titleEl = document.getElementById('dailyThoughtTitle');
+  const textEl = document.getElementById('dailyThoughtText');
+  if (titleEl && thought.titre) titleEl.textContent = thought.titre;
+  if (textEl && thought.texte) textEl.textContent = thought.texte;
 }
 
 function daysUntil(dStr) {
@@ -1557,6 +1580,7 @@ function render() {
   const today = new Date();
   document.getElementById('todayDate').textContent =
     today.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+  renderDailyThought();
   updateUpcomingButton();
 
   // Barre "Nouveau cycle" si éléments récurrents
