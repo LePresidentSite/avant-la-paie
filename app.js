@@ -355,7 +355,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=43');
+    const registration = await navigator.serviceWorker.register('sw.js?v=44');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -1486,38 +1486,38 @@ function countRecurrent() {
   return recRev + recEnv;
 }
 
-// Renouveler un cycle: décocher reçus/déposés ET avancer les dates
+// Renouveler un cycle: ne jamais supprimer, seulement preparer le prochain cycle
 async function renewCycle() {
   if (!canUseProFeature('Le nouveau cycle automatique')) return;
 
-  if (!confirm('Démarrer un nouveau cycle?\n\nÇa va :\n• Décocher toutes les enveloppes récurrentes\n• Avancer les dates des revenus et dépenses récurrents\n• Garder les éléments "une seule fois" tels quels\n\nContinuer?')) return;
+  if (!confirm('Démarrer un nouveau cycle?\n\n- Tes éléments récurrents seront conservés et leurs dates avancées\n- Les cases cochées seront décochées\n- Ton ajustement manuel sera remis à zéro\n- RIEN ne sera supprimé\n\nTu pourras toujours supprimer manuellement ce que tu veux.')) return;
 
   const btn = document.getElementById('newCycleBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Renouvellement...';
 
   try {
-    // Renouveler revenus récurrents
+    // Les revenus restent tous en place. Les recurrents avancent, les autres sont seulement decoches.
     const previousAdjustedAmount = getAdjustedRemainingAmount();
     const activeAdjustmentOffset = getManualAdjustmentOffset();
     for (const r of state.revenus) {
+      r.received = false;
       if (r.recurrence && r.recurrence !== 'once') {
-        r.received = false;
         if (r.date) {
           r.date = advanceDate(r.date, r.recurrence);
         }
-        await saveRevenu(r, false);
       }
+      await saveRevenu(r, false);
     }
-    // Renouveler enveloppes récurrentes
+    // Les enveloppes restent toutes en place. Les recurrentes avancent, les autres sont seulement decochees.
     for (const e of state.envelopes) {
+      e.allocated = false;
       if (e.recurrence && e.recurrence !== 'once') {
-        e.allocated = false;
         if (e.date) {
           e.date = advanceDate(e.date, e.recurrence);
         }
-        await saveEnvelope(e, false);
       }
+      await saveEnvelope(e, false);
     }
     await saveBudgetAdjustment({
       previous_amount: previousAdjustedAmount,
