@@ -1614,22 +1614,44 @@
   }
 
   #cycleBar {
-    padding: 18px !important;
-    margin: 20px 0 28px !important;
-    gap: 14px !important;
-    background: linear-gradient(145deg, rgba(255,138,61,0.11), rgba(255,255,255,0.035)) !important;
+    padding: 9px 12px !important;
+    margin: 10px 0 18px !important;
+    gap: 10px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(145deg, rgba(255,255,255,0.045), rgba(255,184,77,0.045)) !important;
+    border-color: rgba(255,184,77,0.12) !important;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.035) !important;
   }
 
   #cycleBarText {
-    color: #D6D9E0;
+    color: rgba(245,245,245,0.66);
     font-family: var(--font-ui);
+    font-size: 12px;
     font-style: normal;
+    line-height: 1.25;
   }
 
   #newCycleBtn {
-    padding: 12px 16px !important;
-    min-height: 46px;
+    padding: 7px 10px !important;
+    min-height: 32px;
     white-space: nowrap;
+    background: rgba(255,184,77,0.10) !important;
+    color: rgba(255,220,166,0.92) !important;
+    border: 1px solid rgba(255,184,77,0.18) !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    font-family: var(--font-ui) !important;
+    font-size: 11.5px !important;
+    font-weight: 650 !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+  }
+
+  #newCycleBtn:hover {
+    background: rgba(255,184,77,0.14) !important;
+    border-color: rgba(255,184,77,0.26) !important;
+    box-shadow: 0 8px 22px rgba(255,138,61,0.10) !important;
+    filter: none !important;
   }
 
   .section-title {
@@ -1877,8 +1899,9 @@
     }
 
     #cycleBar {
-      flex-direction: column;
-      align-items: stretch !important;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center !important;
     }
   }
 </style>
@@ -2117,11 +2140,11 @@
   </button>
 
   <!-- BARRE D'ACTIONS RAPIDES -->
-  <div id="cycleBar" style="display:none; background: linear-gradient(140deg, rgba(255,137,6,0.10), var(--surface)); border: 1px solid rgba(255,137,6,0.25); border-radius: 14px; padding: 12px 16px; margin-bottom: 18px; display:flex; align-items:center; gap:12px;">
-    <div style="flex:1; font-size:13px; color:var(--ink-soft); font-style:italic;">
+  <div id="cycleBar" style="display:none; align-items:center;">
+    <div style="flex:1;">
       <span id="cycleBarText">Tu as des éléments récurrents</span>
     </div>
-    <button id="newCycleBtn" style="background:var(--accent); color:var(--bg); border:none; padding:8px 14px; border-radius:10px; font-family:'Fraunces',serif; font-size:13px; font-weight:600; cursor:pointer;">
+    <button id="newCycleBtn">
       🔄 Nouveau cycle
     </button>
   </div>
