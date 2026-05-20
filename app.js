@@ -75,6 +75,7 @@ let upcomingMonth = new Date();
 upcomingMonth.setDate(1);
 let selectedUpcomingDate = null;
 let savingMove = { id: null, type: 'deposit' };
+let savingAuto = { id: null };
 let pushRegistrationInProgress = false;
 let pushForegroundListenerAttached = false;
 
@@ -609,8 +610,13 @@ async function loadUserData() {
         name: s.name,
         amount: parseFloat(s.amount) || 0,
         target_amount: s.target_amount !== null && s.target_amount !== undefined ? parseFloat(s.target_amount) : null,
-        date: s.date || ''
+        date: s.date || '',
+        recurring_deposit_enabled: Boolean(s.recurring_deposit_enabled),
+        recurring_deposit_amount: parseFloat(s.recurring_deposit_amount) || 0,
+        recurring_deposit_frequency: s.recurring_deposit_frequency || 'once',
+        recurring_deposit_next_date: s.recurring_deposit_next_date || ''
       }));
+      await applyDueRecurringSavingsDeposits();
     } else {
       state.savings = [];
     }
@@ -741,7 +747,7 @@ async function deleteEnvelope(id) {
 }
 
 // Sauvegarder une mise de côté
-async function saveSaving(saving, isNew) {
+async function saveSaving(saving, isNew, options = {}) {
   if (!currentUser) return null;
   try {
     const payload = {
@@ -750,7 +756,11 @@ async function saveSaving(saving, isNew) {
       name: saving.name,
       amount: saving.amount || 0,
       target_amount: saving.target_amount || null,
-      date: saving.date || null
+      date: saving.date || null,
+      recurring_deposit_enabled: Boolean(saving.recurring_deposit_enabled),
+      recurring_deposit_amount: parseFloat(saving.recurring_deposit_amount) || 0,
+      recurring_deposit_frequency: saving.recurring_deposit_frequency || 'once',
+      recurring_deposit_next_date: saving.recurring_deposit_next_date || null
     };
 
     if (isNew) {
@@ -770,6 +780,10 @@ async function saveSaving(saving, isNew) {
           amount: payload.amount,
           target_amount: payload.target_amount,
           date: payload.date,
+          recurring_deposit_enabled: payload.recurring_deposit_enabled,
+          recurring_deposit_amount: payload.recurring_deposit_amount,
+          recurring_deposit_frequency: payload.recurring_deposit_frequency,
+          recurring_deposit_next_date: payload.recurring_deposit_next_date,
           updated_at: new Date().toISOString()
         })
         .eq('id', saving.id)
@@ -779,7 +793,9 @@ async function saveSaving(saving, isNew) {
     }
   } catch (e) {
     console.error('Erreur sauvegarde mise de côté:', e);
-    alert('Erreur de sauvegarde : ' + e.message);
+    if (!options.silent) {
+      alert('Erreur de sauvegarde : ' + e.message);
+    }
     return null;
   }
 }
@@ -1637,6 +1653,205 @@ async function confirmSavingMove() {
   }
 }
 
+function getNextOccurrenceOnOrAfter(dateStr, recurrence, from = new Date()) {
+  const start = parseLocalDate(dateStr);
+  if (!start) return isoDate(new Date());
+
+  const today = new Date(from);
+  today.setHours(0, 0, 0, 0);
+
+  let current = new Date(start);
+  const anchorDay = start.getDate();
+  let guard = 0;
+
+  while (current < today && guard < 500) {
+    const next = addRecurrenceInterval(current, recurrence, anchorDay);
+    if (!next || next <= current) break;
+    current = next;
+    guard++;
+  }
+
+  return isoDate(current);
+}
+
+function getDefaultSavingAutoDate(frequency = null) {
+  const payInfo = getPayPeriodInfo();
+  if (payInfo?.revenu?.date) {
+    return getNextOccurrenceOnOrAfter(payInfo.revenu.date, payInfo.recurrence || frequency || 'monthly');
+  }
+  return isoDate(new Date());
+}
+
+async function applyDueRecurringSavingsDeposits() {
+  if (!currentUser || !Array.isArray(state.savings)) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let changed = false;
+
+  for (const saving of state.savings) {
+    if (!saving.recurring_deposit_enabled) continue;
+
+    const amountEach = parseFloat(saving.recurring_deposit_amount) || 0;
+    const frequency = saving.recurring_deposit_frequency || 'once';
+    if (amountEach <= 0 || frequency === 'once') continue;
+
+    let nextDate = parseLocalDate(saving.recurring_deposit_next_date);
+    if (!nextDate) {
+      saving.recurring_deposit_next_date = getDefaultSavingAutoDate(frequency);
+      await saveSaving(saving, false, { silent: true });
+      changed = true;
+      continue;
+    }
+
+    const anchorDay = nextDate.getDate();
+    let currentAmount = parseFloat(saving.amount) || 0;
+    const previousAmount = currentAmount;
+    let totalAdded = 0;
+    let guard = 0;
+
+    while (nextDate <= today && guard < 120) {
+      let deposit = amountEach;
+      const target = parseFloat(saving.target_amount) || 0;
+
+      if (target > 0) {
+        const room = Math.max(0, target - currentAmount);
+        deposit = Math.min(deposit, room);
+      }
+
+      if (deposit > 0) {
+        currentAmount = Math.round((currentAmount + deposit) * 100) / 100;
+        totalAdded = Math.round((totalAdded + deposit) * 100) / 100;
+      }
+
+      const advanced = addRecurrenceInterval(nextDate, frequency, anchorDay);
+      if (!advanced || advanced <= nextDate) break;
+      nextDate = advanced;
+      guard++;
+    }
+
+    const nextDateStr = isoDate(nextDate);
+    if (totalAdded > 0 || nextDateStr !== saving.recurring_deposit_next_date) {
+      saving.amount = currentAmount;
+      saving.recurring_deposit_next_date = nextDateStr;
+      const saved = await saveSaving(saving, false, { silent: true });
+
+      if (saved) {
+        changed = true;
+        if (totalAdded > 0) {
+          addSavingMovementHistory({
+            saving_id: saving.id,
+            type: 'deposit',
+            amount: totalAdded,
+            previous_amount: previousAmount,
+            new_amount: currentAmount,
+            note: 'Dépôt automatique',
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    console.log('Dépôts automatiques des fonds bonheur vérifiés.');
+  }
+}
+
+function openSavingAutoModal(saving) {
+  const modal = document.getElementById('savingAutoModal');
+  if (!modal || !saving) return;
+
+  const current = parseFloat(saving.amount) || 0;
+  const payInfo = getPayPeriodInfo();
+  const frequency = saving.recurring_deposit_frequency && saving.recurring_deposit_frequency !== 'once'
+    ? saving.recurring_deposit_frequency
+    : (payInfo?.recurrence || 'biweekly');
+
+  savingAuto = { id: saving.id };
+
+  document.getElementById('savingAutoTitle').textContent = `Dépôt automatique · ${saving.name}`;
+  document.getElementById('savingAutoCurrent').textContent = fmt(current);
+  document.getElementById('savingAutoAmount').value = saving.recurring_deposit_amount || '';
+  document.getElementById('savingAutoFrequency').value = frequency;
+  document.getElementById('savingAutoDate').value = saving.recurring_deposit_next_date || getDefaultSavingAutoDate(frequency);
+
+  updateSavingAutoPreview();
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('savingAutoAmount')?.focus(), 80);
+}
+
+function closeSavingAutoModal() {
+  document.getElementById('savingAutoModal')?.classList.remove('show');
+  savingAuto = { id: null };
+}
+
+function updateSavingAutoPreview() {
+  const saving = state.savings.find(s => s.id === savingAuto.id);
+  const totalEl = document.getElementById('savingAutoPreview');
+  if (!saving || !totalEl) return;
+
+  const amount = parseFloat(document.getElementById('savingAutoAmount')?.value) || 0;
+  const current = parseFloat(saving.amount) || 0;
+  const target = parseFloat(saving.target_amount) || 0;
+  const next = target > 0 ? Math.min(target, current + amount) : current + amount;
+  totalEl.textContent = fmt(next);
+}
+
+async function saveSavingAutoSettings() {
+  const saving = state.savings.find(s => s.id === savingAuto.id);
+  if (!saving) return;
+
+  const amount = parseFloat(document.getElementById('savingAutoAmount')?.value);
+  const frequency = document.getElementById('savingAutoFrequency')?.value || 'biweekly';
+  const nextDate = document.getElementById('savingAutoDate')?.value || '';
+
+  if (Number.isNaN(amount) || amount <= 0) {
+    alert('Entre un montant automatique plus grand que 0 $.');
+    return;
+  }
+  if (!nextDate) {
+    alert('Choisis la date du prochain dépôt automatique.');
+    return;
+  }
+
+  const btn = document.getElementById('savingAutoSaveBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde...';
+
+  saving.recurring_deposit_enabled = true;
+  saving.recurring_deposit_amount = Math.round(amount * 100) / 100;
+  saving.recurring_deposit_frequency = frequency;
+  saving.recurring_deposit_next_date = nextDate;
+
+  const saved = await saveSaving(saving, false);
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (saved) {
+    closeSavingAutoModal();
+    render();
+  }
+}
+
+async function disableSavingAuto() {
+  const saving = state.savings.find(s => s.id === savingAuto.id);
+  if (!saving) return;
+
+  saving.recurring_deposit_enabled = false;
+  saving.recurring_deposit_amount = 0;
+  saving.recurring_deposit_frequency = 'once';
+  saving.recurring_deposit_next_date = '';
+
+  const saved = await saveSaving(saving, false);
+  if (saved) {
+    closeSavingAutoModal();
+    render();
+  }
+}
+
 function countRecurrent() {
   const recRev = state.revenus.filter(r => r.recurrence && r.recurrence !== 'once').length;
   const recEnv = state.envelopes.filter(e => e.recurrence && e.recurrence !== 'once').length;
@@ -1934,6 +2149,10 @@ function render() {
             }).join('')
           }</div>`
         : '';
+      const autoAmount = parseFloat(item.recurring_deposit_amount) || 0;
+      const autoLabel = item.recurring_deposit_enabled && autoAmount > 0
+        ? `<div class="saving-auto-note">Auto : ${fmt(autoAmount)} · ${getRecurrenceLabel(item.recurring_deposit_frequency).replace('🔁 ', '')}${item.recurring_deposit_next_date ? ` · prochain ${formatDateShort(item.recurring_deposit_next_date)}` : ''}</div>`
+        : '';
       const goalText = target > 0 ? `<span> / ${fmt(target)}</span>` : '';
       const div = document.createElement('div');
       div.className = 'item';
@@ -1943,11 +2162,13 @@ function render() {
           <div class="item-name">${escapeHtml(item.name)}</div>
           <div class="item-amount"><strong class="saving">${fmt(savedAmount)}</strong>${goalText}${when}</div>
           ${progress}
+          ${autoLabel}
           ${history}
         </div>
         <div class="item-actions saving-actions">
           <button class="saving-mini-btn deposit" data-save-deposit="${item.id}">+ Déposer</button>
           <button class="saving-mini-btn withdraw" data-save-withdraw="${item.id}">- Retirer</button>
+          <button class="saving-mini-btn auto" data-save-auto="${item.id}">Auto</button>
           <button class="icon-btn" data-save-edit="${item.id}">✎</button>
         </div>
       `;
@@ -2738,6 +2959,9 @@ document.body.addEventListener('click', async e => {
   } else if (t.dataset.saveWithdraw) {
     const saving = state.savings.find(x => x.id === t.dataset.saveWithdraw);
     if (saving) openSavingMoveModal(saving, 'withdraw');
+  } else if (t.dataset.saveAuto) {
+    const saving = state.savings.find(x => x.id === t.dataset.saveAuto);
+    if (saving) openSavingAutoModal(saving);
   } else if (t.dataset.saveEdit) {
     const saving = state.savings.find(x => x.id === t.dataset.saveEdit);
     if (saving) openModal('saving', saving);
@@ -2764,6 +2988,15 @@ document.getElementById('savingMoveCancelBtn')?.addEventListener('click', closeS
 document.getElementById('savingMoveConfirmBtn')?.addEventListener('click', confirmSavingMove);
 document.getElementById('savingMoveModal')?.addEventListener('click', e => {
   if (e.target.id === 'savingMoveModal') closeSavingMoveModal();
+});
+
+document.getElementById('savingAutoAmount')?.addEventListener('input', updateSavingAutoPreview);
+document.getElementById('savingAutoFrequency')?.addEventListener('change', updateSavingAutoPreview);
+document.getElementById('savingAutoCancelBtn')?.addEventListener('click', closeSavingAutoModal);
+document.getElementById('savingAutoSaveBtn')?.addEventListener('click', saveSavingAutoSettings);
+document.getElementById('savingAutoDisableBtn')?.addEventListener('click', disableSavingAuto);
+document.getElementById('savingAutoModal')?.addEventListener('click', e => {
+  if (e.target.id === 'savingAutoModal') closeSavingAutoModal();
 });
 
 document.getElementById('resetBtn').onclick = async () => {

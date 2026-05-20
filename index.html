@@ -628,9 +628,23 @@
     color: rgba(245,245,245,0.68);
   }
 
+  .saving-mini-btn.auto {
+    color: #FFC46B;
+    border-color: rgba(255,184,77,0.20);
+    background: rgba(255,184,77,0.08);
+  }
+
   .saving-actions .icon-btn {
     width: 34px;
     height: 30px;
+  }
+
+  .saving-auto-note {
+    margin-top: 7px;
+    color: rgba(255,196,107,0.82);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.35;
   }
 
   .saving-history {
@@ -922,7 +936,7 @@
   .field-row { display: flex; gap: 10px; }
   .field-row > .field { flex: 1; margin-bottom: 14px; }
 
-  input[type="number"], input[type="date"], input[type="text"], input[type="email"], input[type="password"] {
+  input[type="number"], input[type="date"], input[type="text"], input[type="email"], input[type="password"], select {
     width: 100%;
     background: rgba(0,0,0,0.25);
     border: 1px solid var(--line);
@@ -937,6 +951,7 @@
     appearance: none;
     min-height: 48px;
   }
+  select { cursor: pointer; }
   input:focus { outline: none; border-color: var(--accent); }
   input::placeholder { color: var(--ink-soft); opacity: 0.5; }
 
@@ -1576,6 +1591,7 @@
   input[type="text"],
   input[type="email"],
   input[type="password"],
+  select,
   .date-trigger {
     background: rgba(5,7,11,0.72);
     border: 1px solid rgba(255,255,255,0.10);
@@ -2418,6 +2434,54 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="savingMoveCancelBtn">Annuler</button>
       <button class="btn btn-primary" id="savingMoveConfirmBtn">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Depot automatique dans un fonds bonheur -->
+<div class="modal-bg" id="savingAutoModal">
+  <div class="modal adjust-modal">
+    <h3 id="savingAutoTitle">Depot automatique</h3>
+    <p class="saving-help">
+      Choisis combien l'app ajoute automatiquement a ce fonds, a partir de la date choisie.
+      Rien n'est ajoute d'avance.
+    </p>
+
+    <div class="adjust-current">
+      Montant actuel : <strong id="savingAutoCurrent">0 $</strong>
+    </div>
+
+    <div class="field">
+      <label>Montant a deposer automatiquement</label>
+      <input type="number" id="savingAutoAmount" placeholder="ex. 10" inputmode="decimal" step="0.01" min="0">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Frequence</label>
+        <select id="savingAutoFrequency">
+          <option value="weekly">Chaque semaine</option>
+          <option value="biweekly">Aux 2 semaines</option>
+          <option value="monthly">Chaque mois</option>
+          <option value="quarterly">Aux 3 mois</option>
+          <option value="yearly">Chaque annee</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prochain depot</label>
+        <input type="date" id="savingAutoDate">
+      </div>
+    </div>
+
+    <div class="saving-total-preview">
+      Prochain total prevu
+      <strong id="savingAutoPreview">0 $</strong>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="savingAutoDisableBtn">Desactiver</button>
+      <button class="btn btn-ghost" id="savingAutoCancelBtn">Annuler</button>
+      <button class="btn btn-primary" id="savingAutoSaveBtn">Sauvegarder</button>
     </div>
   </div>
 </div>
