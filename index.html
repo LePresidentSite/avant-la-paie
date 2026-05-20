@@ -589,6 +589,92 @@
 
   .item-actions { display: flex; gap: 6px; }
 
+  .saving-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 96px;
+  }
+
+  .saving-mini-btn {
+    min-height: 30px;
+    width: 100%;
+    padding: 0 9px;
+    border: 1px solid rgba(255,255,254,0.08);
+    border-radius: 10px;
+    background: rgba(255,255,254,0.05);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+
+  .saving-mini-btn:active {
+    transform: scale(0.96);
+  }
+
+  .saving-mini-btn.deposit {
+    color: #D8C7FF;
+    border-color: rgba(167,139,250,0.20);
+    background: rgba(167,139,250,0.10);
+  }
+
+  .saving-mini-btn.withdraw {
+    color: rgba(245,245,245,0.68);
+  }
+
+  .saving-actions .icon-btn {
+    width: 34px;
+    height: 30px;
+  }
+
+  .saving-history {
+    margin-top: 8px;
+    display: grid;
+    gap: 4px;
+    color: rgba(245,245,245,0.48);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .saving-history strong {
+    color: #D8C7FF;
+    font-weight: 700;
+  }
+
+  .saving-total-preview {
+    margin-top: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(167,139,250,0.18);
+    background: rgba(167,139,250,0.08);
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .saving-total-preview strong {
+    display: block;
+    margin-top: 5px;
+    color: #D8C7FF;
+    font-family: var(--font-display, 'Fraunces', serif);
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .saving-help {
+    margin: -4px 0 16px;
+    color: var(--ink-soft);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
   .icon-btn {
     background: rgba(255,255,254,0.05);
     border: none;
@@ -2298,6 +2384,40 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" id="adjustCancelBtn">Annuler</button>
       <button class="btn btn-primary" id="adjustSaveBtn">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Déposer / retirer dans un fonds bonheur -->
+<div class="modal-bg" id="savingMoveModal">
+  <div class="modal adjust-modal">
+    <h3 id="savingMoveTitle">Déposer</h3>
+    <p class="saving-help" id="savingMoveHelp">
+      Tape seulement le montant à ajouter. L'app calcule le nouveau total pour toi.
+    </p>
+
+    <div class="adjust-current">
+      Montant actuel : <strong id="savingMoveCurrent">0 $</strong>
+    </div>
+
+    <div class="field">
+      <label id="savingMoveAmountLabel">Montant à ajouter</label>
+      <input type="number" id="savingMoveAmount" placeholder="0" inputmode="decimal" step="0.01" min="0">
+    </div>
+
+    <div class="field">
+      <label>Petite note <span style="opacity:.6;">Optionnel</span></label>
+      <input type="text" id="savingMoveNote" placeholder="ex. Transfert du vendredi">
+    </div>
+
+    <div class="saving-total-preview">
+      Nouveau total calculé
+      <strong id="savingMoveTotal">0 $</strong>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="savingMoveCancelBtn">Annuler</button>
+      <button class="btn btn-primary" id="savingMoveConfirmBtn">Confirmer</button>
     </div>
   </div>
 </div>

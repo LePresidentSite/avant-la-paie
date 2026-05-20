@@ -74,6 +74,7 @@ let selectedRecurrence = 'once';
 let upcomingMonth = new Date();
 upcomingMonth.setDate(1);
 let selectedUpcomingDate = null;
+let savingMove = { id: null, type: 'deposit' };
 let pushRegistrationInProgress = false;
 let pushForegroundListenerAttached = false;
 
@@ -861,6 +862,55 @@ function escapeHtml(s) {
   }[c]));
 }
 
+function getSavingsMovementsKey() {
+  return currentUser ? `avantLaPaieSavingsMovements:${currentUser.id}` : 'avantLaPaieSavingsMovements:guest';
+}
+
+function loadSavingsMovements() {
+  try {
+    const raw = localStorage.getItem(getSavingsMovementsKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveSavingsMovements(rows) {
+  try {
+    localStorage.setItem(getSavingsMovementsKey(), JSON.stringify(rows.slice(0, 80)));
+  } catch (e) {
+    console.warn('Historique fonds bonheur non sauvegardé:', e);
+  }
+}
+
+function addSavingMovementHistory(row) {
+  const rows = loadSavingsMovements();
+  rows.unshift({
+    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+    saving_id: row.saving_id,
+    type: row.type,
+    amount: parseFloat(row.amount) || 0,
+    previous_amount: parseFloat(row.previous_amount) || 0,
+    new_amount: parseFloat(row.new_amount) || 0,
+    note: row.note || '',
+    created_at: new Date().toISOString()
+  });
+  saveSavingsMovements(rows);
+}
+
+function getSavingMovementHistory(savingId) {
+  return loadSavingsMovements()
+    .filter(row => row.saving_id === savingId)
+    .slice(0, 2);
+}
+
+function formatMovementDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' });
+}
+
 function formatDateShort(dStr) {
   if (!dStr) return '';
   const d = new Date(dStr + 'T00:00:00');
@@ -1500,6 +1550,93 @@ async function saveManualAdjustment() {
   }
 }
 
+function openSavingMoveModal(saving, type = 'deposit') {
+  const modal = document.getElementById('savingMoveModal');
+  if (!modal || !saving) return;
+
+  const isWithdraw = type === 'withdraw';
+  const current = parseFloat(saving.amount) || 0;
+  savingMove = { id: saving.id, type };
+
+  document.getElementById('savingMoveTitle').textContent = `${isWithdraw ? 'Retirer de' : 'Déposer dans'} ${saving.name}`;
+  document.getElementById('savingMoveHelp').textContent = isWithdraw
+    ? "Tape seulement le montant à retirer. L'app calcule le nouveau total pour toi."
+    : "Tape seulement le montant à ajouter. L'app calcule le nouveau total pour toi.";
+  document.getElementById('savingMoveAmountLabel').textContent = isWithdraw ? 'Montant à retirer' : 'Montant à ajouter';
+  document.getElementById('savingMoveCurrent').textContent = fmt(current);
+  document.getElementById('savingMoveAmount').value = '';
+  document.getElementById('savingMoveNote').value = '';
+  updateSavingMovePreview();
+
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('savingMoveAmount')?.focus(), 80);
+}
+
+function closeSavingMoveModal() {
+  document.getElementById('savingMoveModal')?.classList.remove('show');
+  savingMove = { id: null, type: 'deposit' };
+}
+
+function updateSavingMovePreview() {
+  const saving = state.savings.find(s => s.id === savingMove.id);
+  const totalEl = document.getElementById('savingMoveTotal');
+  if (!saving || !totalEl) return;
+
+  const input = document.getElementById('savingMoveAmount');
+  const amount = parseFloat(input?.value) || 0;
+  const current = parseFloat(saving.amount) || 0;
+  const next = savingMove.type === 'withdraw'
+    ? Math.max(0, current - amount)
+    : current + amount;
+
+  totalEl.textContent = fmt(next);
+}
+
+async function confirmSavingMove() {
+  const saving = state.savings.find(s => s.id === savingMove.id);
+  const input = document.getElementById('savingMoveAmount');
+  const noteInput = document.getElementById('savingMoveNote');
+  const amount = parseFloat(input?.value);
+
+  if (!saving) return;
+  if (Number.isNaN(amount) || amount <= 0) {
+    alert('Entre un montant plus grand que 0 $.');
+    return;
+  }
+
+  const current = parseFloat(saving.amount) || 0;
+  if (savingMove.type === 'withdraw' && amount > current) {
+    alert('Tu ne peux pas retirer plus que le montant déjà réservé.');
+    return;
+  }
+
+  const next = savingMove.type === 'withdraw' ? current - amount : current + amount;
+  const roundedNext = Math.round(next * 100) / 100;
+  const btn = document.getElementById('savingMoveConfirmBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sauvegarde...';
+
+  saving.amount = roundedNext;
+  const saved = await saveSaving(saving, false);
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (saved) {
+    addSavingMovementHistory({
+      saving_id: saving.id,
+      type: savingMove.type,
+      amount,
+      previous_amount: current,
+      new_amount: roundedNext,
+      note: noteInput?.value.trim() || ''
+    });
+    closeSavingMoveModal();
+    render();
+  }
+}
+
 function countRecurrent() {
   const recRev = state.revenus.filter(r => r.recurrence && r.recurrence !== 'once').length;
   const recEnv = state.envelopes.filter(e => e.recurrence && e.recurrence !== 'once').length;
@@ -1787,6 +1924,16 @@ function render() {
           <div class="item-progress"><div style="width:${pctSaved}%"></div></div>
         `
         : '';
+      const historyRows = getSavingMovementHistory(item.id);
+      const history = historyRows.length
+        ? `<div class="saving-history">${
+            historyRows.map(row => {
+              const sign = row.type === 'withdraw' ? '-' : '+';
+              const note = row.note ? ` · ${escapeHtml(row.note)}` : '';
+              return `<div><strong>${sign}${fmt(row.amount)}</strong>${note} · ${formatMovementDate(row.created_at)}</div>`;
+            }).join('')
+          }</div>`
+        : '';
       const goalText = target > 0 ? `<span> / ${fmt(target)}</span>` : '';
       const div = document.createElement('div');
       div.className = 'item';
@@ -1796,8 +1943,11 @@ function render() {
           <div class="item-name">${escapeHtml(item.name)}</div>
           <div class="item-amount"><strong class="saving">${fmt(savedAmount)}</strong>${goalText}${when}</div>
           ${progress}
+          ${history}
         </div>
-        <div class="item-actions">
+        <div class="item-actions saving-actions">
+          <button class="saving-mini-btn deposit" data-save-deposit="${item.id}">+ Déposer</button>
+          <button class="saving-mini-btn withdraw" data-save-withdraw="${item.id}">- Retirer</button>
           <button class="icon-btn" data-save-edit="${item.id}">✎</button>
         </div>
       `;
@@ -2582,6 +2732,12 @@ document.body.addEventListener('click', async e => {
   } else if (t.dataset.envEdit) {
     const e2 = state.envelopes.find(x => x.id === t.dataset.envEdit);
     if (e2) openModal('envelope', e2);
+  } else if (t.dataset.saveDeposit) {
+    const saving = state.savings.find(x => x.id === t.dataset.saveDeposit);
+    if (saving) openSavingMoveModal(saving, 'deposit');
+  } else if (t.dataset.saveWithdraw) {
+    const saving = state.savings.find(x => x.id === t.dataset.saveWithdraw);
+    if (saving) openSavingMoveModal(saving, 'withdraw');
   } else if (t.dataset.saveEdit) {
     const saving = state.savings.find(x => x.id === t.dataset.saveEdit);
     if (saving) openModal('saving', saving);
@@ -2603,6 +2759,13 @@ document.getElementById('adjustModal')?.addEventListener('click', e => {
   if (e.target.id === 'adjustModal') closeAdjustmentModal();
 });
 
+document.getElementById('savingMoveAmount')?.addEventListener('input', updateSavingMovePreview);
+document.getElementById('savingMoveCancelBtn')?.addEventListener('click', closeSavingMoveModal);
+document.getElementById('savingMoveConfirmBtn')?.addEventListener('click', confirmSavingMove);
+document.getElementById('savingMoveModal')?.addEventListener('click', e => {
+  if (e.target.id === 'savingMoveModal') closeSavingMoveModal();
+});
+
 document.getElementById('resetBtn').onclick = async () => {
   if (!confirm('Effacer TOUTES tes données et recommencer à zéro? Cette action est irréversible.')) return;
 
@@ -2611,6 +2774,7 @@ document.getElementById('resetBtn').onclick = async () => {
     await supabaseClient.from('envelopes').delete().eq('user_id', currentUser.id);
     await supabaseClient.from('savings').delete().eq('user_id', currentUser.id);
     await supabaseClient.from('budget_adjustments').delete().eq('user_id', currentUser.id);
+    localStorage.removeItem(getSavingsMovementsKey());
     state = { revenus: [], envelopes: [], savings: [], adjustments: [] };
     render();
   } catch (e) {
