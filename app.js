@@ -92,6 +92,7 @@ function trackVirtualPage(screenId) {
     loginScreen: { slug: 'connexion', title: 'Connexion' },
     proScreen: { slug: 'pro', title: 'Passer à PRO' },
     billingScreen: { slug: 'facturation', title: 'Facturation et abonnement' },
+    faqScreen: { slug: 'aide-faq', title: 'Aide FAQ' },
     main: { slug: 'application', title: 'Application' }
   };
 
@@ -111,7 +112,7 @@ function trackVirtualPage(screenId) {
 }
 
 function showScreen(screenId) {
-  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen', 'billingScreen'].forEach(id => {
+  ['loadingScreen', 'welcomeScreen', 'signupScreen', 'loginScreen', 'proScreen', 'billingScreen', 'faqScreen'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -358,7 +359,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=46');
+    const registration = await navigator.serviceWorker.register('sw.js?v=49');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -2654,6 +2655,11 @@ document.getElementById('enableNotificationsBtn').onclick = async () => {
   }
 };
 
+document.getElementById('helpFaqBtn').onclick = () => {
+  document.getElementById('userDropdown').classList.remove('show');
+  showScreen('faqScreen');
+};
+
 document.getElementById('deleteAccountBtn')?.addEventListener('click', e => openDeleteAccountModal(e));
 document.getElementById('deleteAccountCancelBtn')?.addEventListener('click', closeDeleteAccountModal);
 document.getElementById('deleteAccountContinueBtn')?.addEventListener('click', showDeleteAccountFinalStep);
@@ -2670,6 +2676,10 @@ document.getElementById('proBackBtn').onclick = () => {
 };
 
 document.getElementById('billingBackBtn').onclick = () => {
+  showScreen('main');
+};
+
+document.getElementById('faqBackBtn').onclick = () => {
   showScreen('main');
 };
 

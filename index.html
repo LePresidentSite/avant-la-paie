@@ -2348,6 +2348,80 @@
   </div>
 </div>
 
+<!-- ECRAN AIDE / FAQ -->
+<div class="auth-screen" id="faqScreen" style="display:none;">
+  <div class="auth-card faq-screen-card">
+    <button class="auth-btn ghost" id="faqBackBtn" style="margin-bottom:20px; padding:8px 16px; font-size:14px; width:auto; display:inline-block;">&larr; Retour</button>
+
+    <div class="auth-logo" style="margin-bottom: 8px;">Aide <span>/ FAQ</span></div>
+    <div class="auth-tagline">Une question? On y r&eacute;pond ici &#129505;</div>
+
+    <div class="app-faq-list">
+      <details class="app-faq-item">
+        <summary>Est-ce vraiment gratuit pendant 30 jours?</summary>
+        <div class="app-faq-answer">
+          Oui, compl&egrave;tement! Tu acc&egrave;des &agrave; toutes les fonctionnalit&eacute;s pendant 30 jours sans aucun engagement. Aucun paiement n'est pr&eacute;lev&eacute; pendant cette p&eacute;riode.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Comment annuler mon abonnement?</summary>
+        <div class="app-faq-answer">
+          Tr&egrave;s simple. Dans le menu profil, clique sur "Facturation et abonnement", puis "Annuler". Tu peux annuler &agrave; tout moment, m&ecirc;me pendant l'essai gratuit. Aucun frais cach&eacute;.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Mes informations bancaires sont-elles en s&eacute;curit&eacute;?</summary>
+        <div class="app-faq-answer">
+          Absolument. Les paiements sont g&eacute;r&eacute;s par Stripe, la m&ecirc;me technologie utilis&eacute;e par Amazon, Google et Spotify. Tes informations bancaires ne sont JAMAIS stock&eacute;es sur nos serveurs.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>L'app fonctionne sur iPhone ET Android?</summary>
+        <div class="app-faq-answer">
+          Oui! Avant la Paie fonctionne directement dans le navigateur de ton t&eacute;l&eacute;phone (Safari, Chrome, etc.) et tu peux l'installer sur ton &eacute;cran d'accueil comme une vraie application.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Est-ce que &ccedil;a marche si je n'ai pas de TDAH?</summary>
+        <div class="app-faq-answer">
+          Bien s&ucirc;r! L'app est pens&eacute;e pour les cerveaux TDAH (simple, visuelle, sans culpabilit&eacute;), mais ces principes plaisent &agrave; beaucoup de monde, peu importe leur cerveau. Si tu cherches une gestion budget douce et claire, &ccedil;a va te servir.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Comment r&eacute;initialiser mon mot de passe?</summary>
+        <div class="app-faq-answer">
+          Sur l'&eacute;cran de connexion, clique sur "Mot de passe oubli&eacute;". Tu recevras un courriel avec un lien pour le r&eacute;initialiser. Si tu as un souci, &eacute;cris-nous &agrave; <a href="mailto:avantlapaie@outlook.com">avantlapaie@outlook.com</a>.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Quelle est la diff&eacute;rence entre les forfaits?</summary>
+        <div class="app-faq-answer">
+          Les fonctionnalit&eacute;s sont les m&ecirc;mes dans tous les forfaits. La diff&eacute;rence est seulement la dur&eacute;e :
+          <ul>
+            <li>Mensuel &mdash; 4,99 $/mois</li>
+            <li>Annuel &mdash; 29,99 $/an (tu &eacute;conomises plus de 30 $ par rapport au mensuel!)</li>
+            <li>Acc&egrave;s &agrave; vie &mdash; Offre de lancement &agrave; 39,99 $ pour les 100 premi&egrave;res inscriptions (prix r&eacute;gulier ensuite : 99 $)</li>
+          </ul>
+          Tu peux changer ou annuler &agrave; tout moment depuis ton profil.
+        </div>
+      </details>
+
+      <details class="app-faq-item">
+        <summary>Comment vous contacter si j'ai des questions?</summary>
+        <div class="app-faq-answer">
+          &Eacute;cris-nous &agrave; <a href="mailto:avantlapaie@outlook.com">avantlapaie@outlook.com</a> &#129505; On r&eacute;pond avec plaisir!
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
 <!-- APP PRINCIPALE (après connexion) -->
 <div class="app" id="mainApp">
 
@@ -2366,6 +2440,7 @@
             <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
             <button id="manageBillingBtn">Facturation et abonnement</button>
             <button id="enableNotificationsBtn">Activer les rappels</button>
+            <button id="helpFaqBtn">Aide / FAQ</button>
             <button type="button" class="danger delete-account-menu-btn" id="deleteAccountBtn" onclick="event.stopPropagation(); openDeleteAccountModal(event);">⚠ Supprimer mon compte</button>
             <button class="danger" id="logoutBtn">Déconnexion</button>
           </div>
@@ -2702,10 +2777,10 @@
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="pensees-avant-la-paie.js?v=1"></script>
-<script src="app.js?v=43"></script>
+<script src="app.js?v=44"></script>
 <script>
   if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=48').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=49').catch(() => {});
   }
 </script>
 </body>
