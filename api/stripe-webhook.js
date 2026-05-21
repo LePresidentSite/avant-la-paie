@@ -305,6 +305,10 @@ async function updateUserSubscription(userId, data) {
     });
 
   if (error) {
+    if (error.code === '23503' || error.message?.toLowerCase().includes('foreign key')) {
+      console.warn('Webhook ignore: compte utilisateur deja supprime:', userId);
+      return;
+    }
     console.error('Erreur Supabase:', error);
     throw error;
   }
