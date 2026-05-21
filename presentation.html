@@ -535,6 +535,43 @@
     font-size: 16px;
     font-weight: 700;
   }
+  .price .price-was {
+    display: inline-block;
+    margin-right: 10px;
+    color: rgba(203, 213, 225, 0.62);
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(18px, 2vw, 24px);
+    font-weight: 800;
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+  }
+  .price .price-current {
+    color: inherit;
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .lifetime-offer-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 4px 0 16px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.22);
+    color: #FDE68A;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+  .lifetime-offer-note.sold-out {
+    background: rgba(96, 165, 250, 0.12);
+    border-color: rgba(96, 165, 250, 0.22);
+    color: #BFDBFE;
+  }
   .price-note {
     color: var(--muted);
     margin-bottom: 20px;
@@ -1642,10 +1679,15 @@
         les enveloppes illimitées, les récurrences, le calendrier complet et les Fonds bonheur.
       </p>
       <div class="price-grid">
-        <div class="price-card highlight">
-          <div class="price-badge">Une seule fois</div>
+        <div class="price-card highlight" id="lifetimePriceCard">
+          <div class="price-badge" id="lifetimePriceBadge">Offre de lancement</div>
           <div class="price-name">Accès à vie ✨</div>
-          <div class="price">39,99 $ <span>une seule fois</span></div>
+          <div class="price" id="lifetimePrice">
+            <span class="price-was" id="lifetimeRegularPrice">99 $</span>
+            <span class="price-current" id="lifetimeCurrentPrice">39,99 $</span>
+            <span>une seule fois</span>
+          </div>
+          <div class="lifetime-offer-note" id="lifetimeOfferNote">Offre de lancement - chargement des places...</div>
           <p class="price-note">Même accès que PRO, sans renouvellement et sans date d'expiration.</p>
           <div class="included">
             <span>✓ Sources de revenus illimitées</span>
@@ -1748,5 +1790,51 @@
       </div>
     </div>
   </footer>
+  <script>
+    (function () {
+      const note = document.getElementById('lifetimeOfferNote');
+      const current = document.getElementById('lifetimeCurrentPrice');
+      const regular = document.getElementById('lifetimeRegularPrice');
+      const badge = document.getElementById('lifetimePriceBadge');
+
+      if (!note || !current || !regular || !badge) return;
+
+      function showEarlyBird(data) {
+        const remaining = Math.max(Number(data.remaining || 0), 0);
+        const sold = Math.max(Number(data.sold || 0), 0);
+        const limit = Math.max(Number(data.limit || 100), 1);
+
+        regular.style.display = 'inline-block';
+        current.textContent = '39,99 $';
+        badge.textContent = 'Early Bird';
+        note.classList.remove('sold-out');
+        note.textContent = `Offre de lancement - plus que ${remaining} places a 39,99 $ (${sold}/${limit} prises). Apres, ce sera 99 $.`;
+      }
+
+      function showRegular() {
+        regular.style.display = 'none';
+        current.textContent = '99 $';
+        badge.textContent = 'Prix regulier';
+        note.classList.add('sold-out');
+        note.textContent = 'Acces a vie au prix regulier - paiement unique, sans renouvellement.';
+      }
+
+      fetch('https://avant-la-paie.vercel.app/api/lifetime-offer-status', { cache: 'no-store' })
+        .then((response) => {
+          if (!response.ok) throw new Error('Compteur indisponible');
+          return response.json();
+        })
+        .then((data) => {
+          if (data && data.isEarlyBird) {
+            showEarlyBird(data);
+          } else {
+            showRegular();
+          }
+        })
+        .catch(() => {
+          note.textContent = 'Offre de lancement en cours - le prix exact est confirme au paiement.';
+        });
+    })();
+  </script>
 </body>
 </html>

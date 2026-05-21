@@ -2201,10 +2201,14 @@
 
     <!-- Acces a vie (mis en avant) -->
     <div class="auth-form" style="border-color: var(--accent); position: relative; margin-bottom: 14px;">
-      <div style="position: absolute; top: -12px; left: 22px; background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;">UNE SEULE FOIS</div>
+      <div id="subscribeLifetimeBadge" style="position: absolute; top: -12px; left: 22px; background: var(--accent); color: var(--bg); padding: 3px 12px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;">EARLY BIRD</div>
       <h2 style="margin-bottom: 4px;">Accès à vie ✨</h2>
-      <div style="font-size: 36px; font-weight: 800; font-style: italic; color: var(--accent); letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">39,99 $ <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">une seule fois</span></div>
-      <div class="subtitle" style="margin-bottom: 16px;">Même accès que PRO · sans renouvellement</div>
+      <div style="font-size: 36px; font-weight: 800; font-style: italic; color: var(--accent); letter-spacing: -0.02em; line-height: 1; margin: 10px 0 4px;">
+        <span id="subscribeLifetimeWas" style="font-size: 18px; color: var(--ink-soft); font-weight: 700; text-decoration: line-through; margin-right: 8px;">99 $</span>
+        <span id="subscribeLifetimePrice">39,99 $</span>
+        <span style="font-size: 16px; color: var(--ink-soft); font-weight: 400;">une seule fois</span>
+      </div>
+      <div class="subtitle" id="subscribeLifetimeOfferText" style="margin-bottom: 16px;">Offre de lancement · 100 premières places</div>
       <button class="auth-btn" id="subscribeLifetimeBtn">Obtenir l'accès à vie</button>
     </div>
 
@@ -2257,7 +2261,7 @@
       <div style="display:grid; gap:10px;">
         <button class="auth-btn ghost" id="billingMonthlyBtn">PRO mensuel · 4,99 $/mois</button>
         <button class="auth-btn ghost" id="billingYearlyBtn">PRO annuel · 29,99 $/an</button>
-        <button class="auth-btn" id="billingLifetimeBtn">Accès à vie · 39,99 $ une seule fois ✨</button>
+        <button class="auth-btn" id="billingLifetimeBtn">Accès à vie · Early Bird 39,99 $ ✨</button>
       </div>
     </div>
 
@@ -2629,10 +2633,10 @@
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="pensees-avant-la-paie.js?v=1"></script>
-<script src="app.js?v=42"></script>
+<script src="app.js?v=43"></script>
 <script>
   if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=47').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=48').catch(() => {});
   }
 </script>
 </body>

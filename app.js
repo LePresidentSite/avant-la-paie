@@ -56,6 +56,7 @@ const EMOJIS_SAVE = ['🛟','💛','✨','✈️','🛋️','🎄','🚗','🏠'
 // État global
 let currentUser = null;
 let currentSubscription = null;
+let lifetimeOfferStatus = null;
 const STRIPE_PORTAL_LOGIN_URL = 'https://billing.stripe.com/p/login/14A5kE7C9fmoduWb5veQM00';
 const FREE_LIMITS = {
   revenus: 1,
@@ -2632,8 +2633,9 @@ document.getElementById('logoutBtn').onclick = () => {
   if (confirm('Te déconnecter?')) signOut();
 };
 
-document.getElementById('upgradeBtn').onclick = () => {
+document.getElementById('upgradeBtn').onclick = async () => {
   document.getElementById('userDropdown').classList.remove('show');
+  await loadLifetimeOfferStatus();
   showScreen('proScreen');
 };
 
@@ -2691,6 +2693,49 @@ function getBillingStatusText() {
   return 'Statut de facturation : ' + status;
 }
 
+function applyLifetimeOfferDisplay(status) {
+  const badge = document.getElementById('subscribeLifetimeBadge');
+  const was = document.getElementById('subscribeLifetimeWas');
+  const price = document.getElementById('subscribeLifetimePrice');
+  const text = document.getElementById('subscribeLifetimeOfferText');
+  const billingBtn = document.getElementById('billingLifetimeBtn');
+
+  const isEarlyBird = !status || status.isEarlyBird;
+  const remaining = status ? Math.max(Number(status.remaining || 0), 0) : null;
+  const limit = status ? Math.max(Number(status.limit || 100), 1) : 100;
+
+  if (isEarlyBird) {
+    if (badge) badge.textContent = 'EARLY BIRD';
+    if (was) was.style.display = 'inline';
+    if (price) price.textContent = '39,99 $';
+    if (text) {
+      text.textContent = remaining === null
+        ? 'Offre de lancement · 100 premières places'
+        : `Offre de lancement · ${remaining} places restantes sur ${limit}`;
+    }
+    if (billingBtn) billingBtn.textContent = 'Accès à vie · Early Bird 39,99 $ ✨';
+  } else {
+    if (badge) badge.textContent = 'PRIX RÉGULIER';
+    if (was) was.style.display = 'none';
+    if (price) price.textContent = '99 $';
+    if (text) text.textContent = 'Paiement unique · sans renouvellement';
+    if (billingBtn) billingBtn.textContent = 'Accès à vie · 99 $ une seule fois ✨';
+  }
+}
+
+async function loadLifetimeOfferStatus() {
+  try {
+    const response = await fetch(`${API_URL}/api/lifetime-offer-status`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Compteur indisponible');
+    lifetimeOfferStatus = await response.json();
+  } catch (error) {
+    console.warn('Compteur accès à vie indisponible:', error.message);
+    lifetimeOfferStatus = null;
+  }
+
+  applyLifetimeOfferDisplay(lifetimeOfferStatus);
+}
+
 function renderBillingOptions() {
   const currentPlanEl = document.getElementById('billingCurrentPlan');
   const monthlyBtn = document.getElementById('billingMonthlyBtn');
@@ -2707,10 +2752,12 @@ function renderBillingOptions() {
   yearlyBtn.style.display = isLifetime ? 'none' : 'block';
   lifetimeBtn.style.display = isLifetime ? 'none' : 'block';
   portalBtn.style.display = hasStripeCustomer ? 'block' : 'none';
+  applyLifetimeOfferDisplay(lifetimeOfferStatus);
 }
 
 async function openBillingOptions() {
   await loadSubscription();
+  await loadLifetimeOfferStatus();
   renderBillingOptions();
   showScreen('billingScreen');
 }
@@ -2720,6 +2767,10 @@ async function startSubscription(plan, sourceButton = null) {
   if (!currentUser) {
     alert('Tu dois être connecté(e)');
     return;
+  }
+
+  if (plan === 'lifetime') {
+    await loadLifetimeOfferStatus();
   }
 
   const buttonsByPlan = {
@@ -3176,4 +3227,5 @@ document.getElementById('calClear').addEventListener('click', function(e) {
 // ============================================================
 // INIT
 // ============================================================
+loadLifetimeOfferStatus();
 checkAuth();
