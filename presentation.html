@@ -1495,6 +1495,58 @@
       width: min(276px, 82vw);
     }
   }
+
+  /* Correctif mobile: le mockup doit suivre le contenu, jamais le chevaucher */
+  @media (max-width: 900px) {
+    .hero {
+      align-items: start;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-visual {
+      min-height: auto;
+      display: grid;
+      place-items: center;
+      padding-top: 30px;
+      overflow: visible;
+    }
+
+    .phone-wrap {
+      position: relative;
+      inset: auto;
+      min-height: 0;
+      width: 100%;
+      z-index: 1;
+    }
+
+    .phone {
+      animation: none;
+      transform: none;
+    }
+
+    .hero-visual::before {
+      inset: 18px 8px 18px;
+      transform: none;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .hero {
+      gap: 0;
+    }
+
+    .hero-visual {
+      padding-top: 34px;
+    }
+
+    .phone.real-phone {
+      width: min(274px, 82vw);
+    }
+  }
 </style>
 </head>
 <body>
