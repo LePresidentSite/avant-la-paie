@@ -2293,7 +2293,7 @@
             <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
             <button id="manageBillingBtn">Facturation et abonnement</button>
             <button id="enableNotificationsBtn">Activer les rappels</button>
-            <button class="danger delete-account-menu-btn" id="deleteAccountBtn">⚠ Supprimer mon compte</button>
+            <button type="button" class="danger delete-account-menu-btn" id="deleteAccountBtn" onclick="event.stopPropagation(); openDeleteAccountModal(event);">⚠ Supprimer mon compte</button>
             <button class="danger" id="logoutBtn">Déconnexion</button>
           </div>
         </div>
@@ -2567,8 +2567,8 @@
         <li>Impossible de récupérer ces informations après la suppression.</li>
       </ul>
       <div class="modal-actions">
-        <button class="btn btn-ghost" id="deleteAccountCancelBtn">Annuler</button>
-        <button class="btn btn-danger" id="deleteAccountContinueBtn">Continuer</button>
+        <button type="button" class="btn btn-ghost" id="deleteAccountCancelBtn" onclick="closeDeleteAccountModal();">Annuler</button>
+        <button type="button" class="btn btn-danger" id="deleteAccountContinueBtn" onclick="showDeleteAccountFinalStep();">Continuer</button>
       </div>
     </div>
 
@@ -2582,8 +2582,8 @@
         <input type="text" id="deleteAccountConfirmInput" placeholder="SUPPRIMER" autocomplete="off" spellcheck="false">
       </div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" id="deleteAccountBackBtn">Annuler</button>
-        <button class="btn btn-danger" id="deleteAccountConfirmBtn" disabled>Supprimer définitivement</button>
+        <button type="button" class="btn btn-ghost" id="deleteAccountBackBtn" onclick="closeDeleteAccountModal();">Annuler</button>
+        <button type="button" class="btn btn-danger" id="deleteAccountConfirmBtn" onclick="permanentlyDeleteAccount();" disabled>Supprimer définitivement</button>
       </div>
     </div>
   </div>
@@ -2629,10 +2629,10 @@
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="pensees-avant-la-paie.js?v=1"></script>
-<script src="app.js?v=41"></script>
+<script src="app.js?v=42"></script>
 <script>
   if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=46').catch(() => {});
+navigator.serviceWorker.register('sw.js?v=47').catch(() => {});
   }
 </script>
 </body>

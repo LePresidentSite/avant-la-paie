@@ -530,15 +530,27 @@ async function signOut() {
   showScreen('welcomeScreen');
 }
 
-function openDeleteAccountModal() {
+function openDeleteAccountModal(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const modal = document.getElementById('deleteAccountModal');
+  const step1 = document.getElementById('deleteAccountStep1');
+  const step2 = document.getElementById('deleteAccountStep2');
+
+  if (!modal || !step1 || !step2) {
+    alert('La fenêtre de suppression n’est pas encore chargée. Recharge la page et réessaie.');
+    return;
+  }
+
   document.getElementById('userDropdown')?.classList.remove('show');
-  document.getElementById('deleteAccountStep1').style.display = 'block';
-  document.getElementById('deleteAccountStep2').style.display = 'none';
+  step1.style.display = 'block';
+  step2.style.display = 'none';
   const input = document.getElementById('deleteAccountConfirmInput');
   const btn = document.getElementById('deleteAccountConfirmBtn');
   if (input) input.value = '';
   if (btn) btn.disabled = true;
-  document.getElementById('deleteAccountModal')?.classList.add('show');
+  modal.classList.add('show');
 }
 
 function closeDeleteAccountModal() {
@@ -548,6 +560,7 @@ function closeDeleteAccountModal() {
   if (input) input.value = '';
   if (btn) {
     btn.disabled = true;
+    btn.dataset.busy = '0';
     btn.textContent = 'Supprimer définitivement';
   }
 }
@@ -568,12 +581,14 @@ function updateDeleteAccountConfirmState() {
 async function permanentlyDeleteAccount() {
   const input = document.getElementById('deleteAccountConfirmInput');
   const btn = document.getElementById('deleteAccountConfirmBtn');
+  if (btn?.dataset.busy === '1') return;
   if (!input || !btn || input.value.trim() !== 'SUPPRIMER') {
     alert('Pour confirmer, tu dois écrire SUPPRIMER en majuscules.');
     return;
   }
 
   const originalText = btn.textContent;
+  btn.dataset.busy = '1';
   btn.disabled = true;
   btn.textContent = 'Suppression...';
 
@@ -613,6 +628,7 @@ async function permanentlyDeleteAccount() {
     window.location.href = 'presentation.html';
   } catch (e) {
     alert('Impossible de supprimer le compte : ' + e.message);
+    btn.dataset.busy = '0';
     btn.disabled = false;
     btn.textContent = originalText;
   }
@@ -2636,7 +2652,7 @@ document.getElementById('enableNotificationsBtn').onclick = async () => {
   }
 };
 
-document.getElementById('deleteAccountBtn')?.addEventListener('click', openDeleteAccountModal);
+document.getElementById('deleteAccountBtn')?.addEventListener('click', e => openDeleteAccountModal(e));
 document.getElementById('deleteAccountCancelBtn')?.addEventListener('click', closeDeleteAccountModal);
 document.getElementById('deleteAccountContinueBtn')?.addEventListener('click', showDeleteAccountFinalStep);
 document.getElementById('deleteAccountBackBtn')?.addEventListener('click', closeDeleteAccountModal);
