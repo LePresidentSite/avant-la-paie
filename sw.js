@@ -1,4 +1,4 @@
-const CACHE = 'avantlapaie-v69';
+const CACHE = 'avantlapaie-v70';
 const ASSETS = [
   './',
   './index.html',
@@ -25,7 +25,7 @@ const ASSETS = [
 ];
 
 try {
-  importScripts('./firebase-config.js?v=2');
+  importScripts('./firebase-config.js?v=3');
 
   if (self.FIREBASE_CONFIG && self.FIREBASE_CONFIG.apiKey) {
     importScripts('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');

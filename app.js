@@ -327,6 +327,30 @@ async function savePushToken(token) {
   if (error) throw error;
 }
 
+async function sendWelcomePushNotification() {
+  const { data } = await supabaseClient.auth.getSession();
+  const accessToken = data?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Session manquante pour tester les rappels.');
+  }
+
+  const response = await fetch(`${API_URL}/api/send-test-notification`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ reason: 'activation' })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || payload.errors?.[0] || 'Notification de test non envoyee.');
+  }
+
+  return payload;
+}
+
 async function ensurePushNotifications(options = {}) {
   if (!currentUser) {
     return { ok: false, message: 'Tu dois être connectée pour activer les rappels.' };
@@ -359,7 +383,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=49');
+    const registration = await navigator.serviceWorker.register('sw.js?v=50');
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
@@ -370,6 +394,10 @@ async function ensurePushNotifications(options = {}) {
       await savePushToken(token);
     } else {
       return { ok: false, message: 'Firebase n’a pas retourné de jeton de notification.' };
+    }
+
+    if (shouldAsk) {
+      await sendWelcomePushNotification();
     }
 
     if (!pushForegroundListenerAttached) {
