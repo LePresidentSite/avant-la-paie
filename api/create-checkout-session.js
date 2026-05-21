@@ -13,6 +13,34 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const LIFETIME_EARLY_BIRD_LIMIT = 100;
+
+async function countLifetimeAccesses() {
+  const { count, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('status', 'lifetime');
+
+  if (error) {
+    console.error('Erreur compteur acces a vie:', error.message);
+    throw error;
+  }
+
+  return count || 0;
+}
+
+async function getLifetimeOfferStatus() {
+  const sold = await countLifetimeAccesses();
+  const remaining = Math.max(LIFETIME_EARLY_BIRD_LIMIT - sold, 0);
+
+  return {
+    limit: LIFETIME_EARLY_BIRD_LIMIT,
+    sold,
+    remaining,
+    isEarlyBird: sold < LIFETIME_EARLY_BIRD_LIMIT
+  };
+}
+
 async function findExistingBillingProfile(userId, userEmail) {
   try {
     const { data } = await supabaseAdmin
@@ -69,19 +97,26 @@ module.exports = async (req, res) => {
 
     let priceId;
     const isLifetime = plan === 'lifetime';
+    let lifetimeOffer = null;
 
     if (plan === 'monthly') {
       priceId = process.env.STRIPE_PRICE_MONTHLY;
     } else if (plan === 'yearly') {
       priceId = process.env.STRIPE_PRICE_YEARLY;
     } else if (isLifetime) {
-      priceId = process.env.STRIPE_PRICE_LIFETIME;
+      lifetimeOffer = await getLifetimeOfferStatus();
+      priceId = lifetimeOffer.isEarlyBird
+        ? process.env.STRIPE_PRICE_LIFETIME
+        : process.env.STRIPE_PRICE_LIFETIME_REGULAR;
     } else {
       return res.status(400).json({ error: 'Plan invalide' });
     }
 
     if (!priceId) {
-      return res.status(500).json({ error: `Price ID manquant pour le plan ${plan}` });
+      const message = isLifetime && lifetimeOffer && !lifetimeOffer.isEarlyBird
+        ? 'Price ID manquant pour Acces a vie regulier (STRIPE_PRICE_LIFETIME_REGULAR)'
+        : `Price ID manquant pour le plan ${plan}`;
+      return res.status(500).json({ error: message });
     }
 
     // URL de retour après paiement
@@ -89,6 +124,10 @@ module.exports = async (req, res) => {
     const successUrl = `${appUrl}/?paiement=success`;
     const cancelUrl = `${appUrl}/?paiement=annule`;
     const billingProfile = await findExistingBillingProfile(userId, userEmail);
+
+    if (isLifetime && billingProfile.status === 'lifetime') {
+      return res.status(400).json({ error: 'Ton acces a vie est deja actif pour ce compte.' });
+    }
 
     // Créer la session Stripe Checkout
     const checkoutParams = {
@@ -106,7 +145,12 @@ module.exports = async (req, res) => {
         access_type: isLifetime ? 'lifetime' : 'subscription',
         previous_subscription_id: isLifetime && billingProfile.subscriptionId
           ? billingProfile.subscriptionId
-          : ''
+          : '',
+        lifetime_offer: lifetimeOffer
+          ? (lifetimeOffer.isEarlyBird ? 'early_bird' : 'regular')
+          : '',
+        lifetime_sold_before_checkout: lifetimeOffer ? String(lifetimeOffer.sold) : '',
+        lifetime_limit: lifetimeOffer ? String(lifetimeOffer.limit) : ''
       },
       success_url: `${successUrl}&plan=${plan}`,
       cancel_url: cancelUrl,
@@ -134,7 +178,11 @@ module.exports = async (req, res) => {
 
     const session = await stripe.checkout.sessions.create(checkoutParams);
 
-    return res.status(200).json({ url: session.url, sessionId: session.id });
+    return res.status(200).json({
+      url: session.url,
+      sessionId: session.id,
+      lifetimeOffer
+    });
 
   } catch (error) {
     console.error('Erreur Stripe:', error);
