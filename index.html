@@ -441,6 +441,11 @@
     margin-bottom: 10px;
     position: relative;
     overflow: hidden;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    isolation: isolate;
   }
   .total-revenus::before {
     content: '';
@@ -451,6 +456,9 @@
     height: 200px;
     background: radial-gradient(circle, rgba(44,182,125,0.18), transparent 70%);
     pointer-events: none;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
   .total-revenus .label {
     font-family: 'JetBrains Mono', monospace;
@@ -2438,13 +2446,13 @@
   </div>
 </div>
 
-<!-- Depot automatique dans un fonds bonheur -->
+<!-- Dépôt automatique dans un fonds bonheur -->
 <div class="modal-bg" id="savingAutoModal">
   <div class="modal adjust-modal">
-    <h3 id="savingAutoTitle">Depot automatique</h3>
+    <h3 id="savingAutoTitle">Dépôt automatique</h3>
     <p class="saving-help">
-      Choisis combien l'app ajoute automatiquement a ce fonds, a partir de la date choisie.
-      Rien n'est ajoute d'avance.
+      Choisis combien l'app ajoute automatiquement à ce fonds, à partir de la date choisie.
+      Rien n'est ajouté d'avance.
     </p>
 
     <div class="adjust-current">
@@ -2452,34 +2460,34 @@
     </div>
 
     <div class="field">
-      <label>Montant a deposer automatiquement</label>
+      <label>Montant à déposer automatiquement</label>
       <input type="number" id="savingAutoAmount" placeholder="ex. 10" inputmode="decimal" step="0.01" min="0">
     </div>
 
     <div class="field-row">
       <div class="field">
-        <label>Frequence</label>
+        <label>Fréquence</label>
         <select id="savingAutoFrequency">
           <option value="weekly">Chaque semaine</option>
           <option value="biweekly">Aux 2 semaines</option>
           <option value="monthly">Chaque mois</option>
           <option value="quarterly">Aux 3 mois</option>
-          <option value="yearly">Chaque annee</option>
+          <option value="yearly">Chaque année</option>
         </select>
       </div>
       <div class="field">
-        <label>Prochain depot</label>
+        <label>Prochain dépôt</label>
         <input type="date" id="savingAutoDate">
       </div>
     </div>
 
     <div class="saving-total-preview">
-      Prochain total prevu
+      Prochain total prévu
       <strong id="savingAutoPreview">0 $</strong>
     </div>
 
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="savingAutoDisableBtn">Desactiver</button>
+      <button class="btn btn-ghost" id="savingAutoDisableBtn">Désactiver</button>
       <button class="btn btn-ghost" id="savingAutoCancelBtn">Annuler</button>
       <button class="btn btn-primary" id="savingAutoSaveBtn">Sauvegarder</button>
     </div>

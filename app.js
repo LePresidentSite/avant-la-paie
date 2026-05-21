@@ -1756,6 +1756,7 @@ async function applyDueRecurringSavingsDeposits() {
   if (changed) {
     console.log('Dépôts automatiques des fonds bonheur vérifiés.');
   }
+  return changed;
 }
 
 function openSavingAutoModal(saving) {
@@ -2992,11 +2993,18 @@ document.getElementById('savingMoveModal')?.addEventListener('click', e => {
 
 document.getElementById('savingAutoAmount')?.addEventListener('input', updateSavingAutoPreview);
 document.getElementById('savingAutoFrequency')?.addEventListener('change', updateSavingAutoPreview);
+document.getElementById('savingAutoDate')?.addEventListener('change', updateSavingAutoPreview);
 document.getElementById('savingAutoCancelBtn')?.addEventListener('click', closeSavingAutoModal);
 document.getElementById('savingAutoSaveBtn')?.addEventListener('click', saveSavingAutoSettings);
 document.getElementById('savingAutoDisableBtn')?.addEventListener('click', disableSavingAuto);
 document.getElementById('savingAutoModal')?.addEventListener('click', e => {
   if (e.target.id === 'savingAutoModal') closeSavingAutoModal();
+});
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden || !currentUser) return;
+  const changed = await applyDueRecurringSavingsDeposits();
+  if (changed) render();
 });
 
 document.getElementById('resetBtn').onclick = async () => {
