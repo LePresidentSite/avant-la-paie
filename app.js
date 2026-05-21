@@ -351,6 +351,34 @@ async function sendWelcomePushNotification() {
   return payload;
 }
 
+function attachPushForegroundListener(messaging) {
+  if (pushForegroundListenerAttached || !messaging) return;
+
+  messaging.onMessage(payload => {
+    const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
+    const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
+
+    if (Notification.permission !== 'granted') return;
+
+    const notificationOptions = {
+      body,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png'
+    };
+
+    if (navigator.serviceWorker?.ready) {
+      navigator.serviceWorker.ready
+        .then(registration => registration.showNotification(title, notificationOptions))
+        .catch(() => new Notification(title, notificationOptions));
+      return;
+    }
+
+    new Notification(title, notificationOptions);
+  });
+
+  pushForegroundListenerAttached = true;
+}
+
 async function ensurePushNotifications(options = {}) {
   if (!currentUser) {
     return { ok: false, message: 'Tu dois être connectée pour activer les rappels.' };
@@ -383,8 +411,10 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=50');
+    const registration = await navigator.serviceWorker.register('sw.js?v=52');
     const messaging = firebase.messaging();
+    attachPushForegroundListener(messaging);
+
     const token = await messaging.getToken({
       vapidKey: FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: registration
@@ -400,7 +430,7 @@ async function ensurePushNotifications(options = {}) {
       await sendWelcomePushNotification();
     }
 
-    if (!pushForegroundListenerAttached) {
+    if (false && !pushForegroundListenerAttached) {
       messaging.onMessage(payload => {
         const title = payload.notification?.title || payload.data?.title || 'Avant la Paie';
         const body = payload.notification?.body || payload.data?.body || 'Petit rappel bienveillant.';
