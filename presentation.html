@@ -594,6 +594,65 @@
     margin-right: auto;
   }
 
+  .faq-section {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(720px 420px at 12% 0%, rgba(96,165,250,0.18), transparent 66%),
+      radial-gradient(540px 340px at 88% 18%, rgba(251,191,36,0.08), transparent 64%),
+      linear-gradient(180deg, #0F172A 0%, #101B35 100%);
+    color: #F8FAFC;
+  }
+  .faq-section .section-kicker { color: #93C5FD; }
+  .faq-section .section-title { color: #F8FAFC; }
+  .faq-section .section-sub { color: rgba(203,213,225,0.86); }
+  .faq-list {
+    display: grid;
+    gap: 12px;
+    max-width: 920px;
+    margin-top: 28px;
+  }
+  .faq-item {
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.07);
+    box-shadow: 0 18px 54px rgba(15,23,42,0.28), inset 0 1px 0 rgba(255,255,255,0.07);
+    overflow: hidden;
+  }
+  .faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px 22px;
+    color: #F8FAFC;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: "▼";
+    flex: 0 0 auto;
+    color: #93C5FD;
+    font-size: 13px;
+    transition: transform .22s ease;
+  }
+  .faq-item[open] summary::after { transform: rotate(180deg); }
+  .faq-answer {
+    padding: 0 22px 22px;
+    color: rgba(203,213,225,0.90);
+    line-height: 1.68;
+  }
+  .faq-answer ul {
+    margin: 10px 0 0;
+    padding-left: 18px;
+  }
+  .faq-answer a {
+    color: #BFDBFE;
+    font-weight: 800;
+  }
+
   .site-footer {
     position: relative;
     overflow: hidden;
@@ -1722,6 +1781,80 @@
           </div>
           <a class="btn secondary" href="index.html">Essayer l'application</a>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-section" id="faq">
+    <div class="section-inner">
+      <div class="section-kicker">Questions fréquentes</div>
+      <h2 class="section-title">Une question? On y répond ici 🧡</h2>
+      <p class="section-sub">
+        Quelques réponses simples pour t'aider à décider tranquillement, sans pression.
+      </p>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Est-ce vraiment gratuit pendant 30 jours?</summary>
+          <div class="faq-answer">
+            Oui, complètement! Tu accèdes à toutes les fonctionnalités pendant 30 jours sans aucun engagement. Aucun paiement n'est prélevé pendant cette période.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Comment annuler mon abonnement?</summary>
+          <div class="faq-answer">
+            Très simple. Dans le menu profil, clique sur "Facturation et abonnement", puis "Annuler". Tu peux annuler à tout moment, même pendant l'essai gratuit. Aucun frais caché.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Mes informations bancaires sont-elles en sécurité?</summary>
+          <div class="faq-answer">
+            Absolument. Les paiements sont gérés par Stripe, la même technologie utilisée par Amazon, Google et Spotify. Tes informations bancaires ne sont JAMAIS stockées sur nos serveurs.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>L'app fonctionne sur iPhone ET Android?</summary>
+          <div class="faq-answer">
+            Oui! Avant la Paie fonctionne directement dans le navigateur de ton téléphone (Safari, Chrome, etc.) et tu peux l'installer sur ton écran d'accueil comme une vraie application.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Est-ce que ça marche si je n'ai pas de TDAH?</summary>
+          <div class="faq-answer">
+            Bien sûr! L'app est pensée pour les cerveaux TDAH (simple, visuelle, sans culpabilité), mais ces principes plaisent à beaucoup de monde, peu importe leur cerveau. Si tu cherches une gestion budget douce et claire, ça va te servir.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Comment réinitialiser mon mot de passe?</summary>
+          <div class="faq-answer">
+            Sur l'écran de connexion, clique sur "Mot de passe oublié". Tu recevras un courriel avec un lien pour le réinitialiser. Si tu as un souci, écris-nous à <a href="mailto:avantlapaie@outlook.com">avantlapaie@outlook.com</a>.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Quelle est la différence entre les forfaits?</summary>
+          <div class="faq-answer">
+            Les fonctionnalités sont les mêmes dans tous les forfaits. La différence est seulement la durée :
+            <ul>
+              <li>Mensuel — 4,99 $/mois</li>
+              <li>Annuel — 29,99 $/an (tu économises plus de 30 $ par rapport au mensuel!)</li>
+              <li>Accès à vie — Offre de lancement à 39,99 $ pour les 100 premières inscriptions (prix régulier ensuite : 99 $)</li>
+            </ul>
+            Tu peux changer ou annuler à tout moment depuis ton profil.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Comment vous contacter si j'ai des questions?</summary>
+          <div class="faq-answer">
+            Écris-nous à <a href="mailto:avantlapaie@outlook.com">avantlapaie@outlook.com</a> 🧡 On répond avec plaisir!
+          </div>
+        </details>
       </div>
     </div>
   </section>

@@ -362,6 +362,75 @@
     margin-top: 4px;
   }
 
+  .faq-screen-card {
+    max-width: 720px;
+  }
+
+  .app-faq-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    text-align: left;
+  }
+
+  .app-faq-item {
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    background: rgba(255,255,254,0.055);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  }
+
+  .app-faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 18px;
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .app-faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .app-faq-item summary::after {
+    content: "▼";
+    flex: 0 0 auto;
+    color: var(--accent);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    transition: transform 0.2s ease;
+  }
+
+  .app-faq-item[open] summary::after {
+    transform: rotate(180deg);
+  }
+
+  .app-faq-answer {
+    padding: 0 18px 18px;
+    color: var(--ink-soft);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.62;
+  }
+
+  .app-faq-answer ul {
+    margin: 10px 0 0;
+    padding-left: 18px;
+  }
+
+  .app-faq-answer a {
+    color: var(--accent);
+    font-weight: 800;
+  }
+
   .upcoming-card {
     width: 100%;
     display: grid;
