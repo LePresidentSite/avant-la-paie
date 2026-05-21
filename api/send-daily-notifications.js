@@ -80,7 +80,113 @@ function buildBody(item, type, today, tomorrow) {
   return `${emoji} ${name} de ${money(item.amount)} arrive ${when} — tu es prete ?`;
 }
 
-async function logBeforeSend(supabase, item, type) {
+function parseDateOnly(value) {
+  if (!value) return null;
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatDateOnly(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function daysInMonthUTC(year, monthIndex) {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function addMonthsPreservingDay(date, months, anchorDay) {
+  const monthIndex = date.getUTCMonth() + months;
+  const year = date.getUTCFullYear() + Math.floor(monthIndex / 12);
+  const normalizedMonth = ((monthIndex % 12) + 12) % 12;
+  const day = Math.min(anchorDay, daysInMonthUTC(year, normalizedMonth));
+  return new Date(Date.UTC(year, normalizedMonth, day));
+}
+
+function addRecurrenceInterval(date, recurrence, anchorDay) {
+  const next = new Date(date.getTime());
+
+  if (recurrence === 'weekly') {
+    next.setUTCDate(next.getUTCDate() + 7);
+    return next;
+  }
+  if (recurrence === 'biweekly') {
+    next.setUTCDate(next.getUTCDate() + 14);
+    return next;
+  }
+  if (recurrence === 'monthly') return addMonthsPreservingDay(date, 1, anchorDay);
+  if (recurrence === 'quarterly') return addMonthsPreservingDay(date, 3, anchorDay);
+  if (recurrence === 'yearly') return addMonthsPreservingDay(date, 12, anchorDay);
+
+  return null;
+}
+
+function normalizeRecurrence(value) {
+  return ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'].includes(value)
+    ? value
+    : 'once';
+}
+
+function expandItemsForReminderWindow(items, today, tomorrow) {
+  const start = parseDateOnly(today);
+  const end = parseDateOnly(tomorrow);
+  if (!start || !end) return [];
+
+  const reminders = [];
+
+  (items || []).forEach(item => {
+    const original = parseDateOnly(item.date);
+    if (!original) return;
+
+    const recurrence = normalizeRecurrence(item.recurrence);
+    if (recurrence === 'once') {
+      if (original >= start && original <= end) {
+        reminders.push({ ...item, date: formatDateOnly(original) });
+      }
+      return;
+    }
+
+    const anchorDay = original.getUTCDate();
+    let occurrence = new Date(original.getTime());
+    let guard = 0;
+
+    while (occurrence < start && guard < 1200) {
+      const next = addRecurrenceInterval(occurrence, recurrence, anchorDay);
+      if (!next || next <= occurrence) return;
+      occurrence = next;
+      guard += 1;
+    }
+
+    while (occurrence <= end && guard < 1300) {
+      if (occurrence >= start) {
+        reminders.push({ ...item, date: formatDateOnly(occurrence) });
+      }
+
+      const next = addRecurrenceInterval(occurrence, recurrence, anchorDay);
+      if (!next || next <= occurrence) break;
+      occurrence = next;
+      guard += 1;
+    }
+  });
+
+  return reminders;
+}
+
+async function notificationAlreadyLogged(supabase, item, type) {
+  const { data, error } = await supabase
+    .from('notification_logs')
+    .select('id')
+    .eq('user_id', item.user_id)
+    .eq('item_type', type)
+    .eq('item_id', item.id)
+    .eq('notify_for_date', item.date)
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
+}
+
+async function logAfterSuccessfulSend(supabase, item, type) {
   const { error } = await supabase
     .from('notification_logs')
     .insert({
@@ -117,8 +223,8 @@ async function disableBadTokens(supabase, tokens, responses) {
 }
 
 async function sendForItem(supabase, item, type, tokens, today, tomorrow) {
-  const shouldSend = await logBeforeSend(supabase, item, type);
-  if (!shouldSend) return { sent: 0, skipped: 1 };
+  const alreadyLogged = await notificationAlreadyLogged(supabase, item, type);
+  if (alreadyLogged) return { sent: 0, skipped: 1 };
 
   const body = buildBody(item, type, today, tomorrow);
   const message = {
@@ -149,6 +255,10 @@ async function sendForItem(supabase, item, type, tokens, today, tomorrow) {
 
   const result = await admin.messaging().sendEachForMulticast(message);
   await disableBadTokens(supabase, tokens, result.responses);
+
+  if (result.successCount > 0) {
+    await logAfterSuccessfulSend(supabase, item, type);
+  }
 
   return {
     sent: result.successCount,
@@ -195,10 +305,9 @@ module.exports = async (req, res) => {
 
     const { data: envelopes, error: envelopesError } = await supabase
       .from('envelopes')
-      .select('id, user_id, emoji, name, amount, date, allocated')
+      .select('id, user_id, emoji, name, amount, date, recurrence, allocated')
       .in('user_id', userIds)
-      .gte('date', today)
-      .lte('date', tomorrow)
+      .not('date', 'is', null)
       .eq('allocated', false);
 
     if (envelopesError) throw envelopesError;
@@ -207,16 +316,18 @@ module.exports = async (req, res) => {
       .from('savings')
       .select('id, user_id, emoji, name, amount, target_amount, date')
       .in('user_id', userIds)
-      .gte('date', today)
-      .lte('date', tomorrow);
+      .not('date', 'is', null);
 
     if (savingsError) throw savingsError;
 
-    const items = [
-      ...(envelopes || []).map(item => ({ type: 'envelope', item })),
-      ...(savings || [])
+    const reminderEnvelopes = expandItemsForReminderWindow(envelopes || [], today, tomorrow);
+    const reminderSavings = expandItemsForReminderWindow(savings || [], today, tomorrow)
         .filter(item => !item.target_amount || Number(item.amount || 0) < Number(item.target_amount || 0))
-        .map(item => ({ type: 'saving', item }))
+        .map(item => ({ ...item, recurrence: 'once' }));
+
+    const items = [
+      ...reminderEnvelopes.map(item => ({ type: 'envelope', item })),
+      ...reminderSavings.map(item => ({ type: 'saving', item }))
     ];
 
     let sent = 0;
