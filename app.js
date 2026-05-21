@@ -530,6 +530,94 @@ async function signOut() {
   showScreen('welcomeScreen');
 }
 
+function openDeleteAccountModal() {
+  document.getElementById('userDropdown')?.classList.remove('show');
+  document.getElementById('deleteAccountStep1').style.display = 'block';
+  document.getElementById('deleteAccountStep2').style.display = 'none';
+  const input = document.getElementById('deleteAccountConfirmInput');
+  const btn = document.getElementById('deleteAccountConfirmBtn');
+  if (input) input.value = '';
+  if (btn) btn.disabled = true;
+  document.getElementById('deleteAccountModal')?.classList.add('show');
+}
+
+function closeDeleteAccountModal() {
+  document.getElementById('deleteAccountModal')?.classList.remove('show');
+  const input = document.getElementById('deleteAccountConfirmInput');
+  const btn = document.getElementById('deleteAccountConfirmBtn');
+  if (input) input.value = '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Supprimer définitivement';
+  }
+}
+
+function showDeleteAccountFinalStep() {
+  document.getElementById('deleteAccountStep1').style.display = 'none';
+  document.getElementById('deleteAccountStep2').style.display = 'block';
+  setTimeout(() => document.getElementById('deleteAccountConfirmInput')?.focus(), 80);
+}
+
+function updateDeleteAccountConfirmState() {
+  const input = document.getElementById('deleteAccountConfirmInput');
+  const btn = document.getElementById('deleteAccountConfirmBtn');
+  if (!input || !btn) return;
+  btn.disabled = input.value.trim() !== 'SUPPRIMER';
+}
+
+async function permanentlyDeleteAccount() {
+  const input = document.getElementById('deleteAccountConfirmInput');
+  const btn = document.getElementById('deleteAccountConfirmBtn');
+  if (!input || !btn || input.value.trim() !== 'SUPPRIMER') {
+    alert('Pour confirmer, tu dois écrire SUPPRIMER en majuscules.');
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Suppression...';
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Session expirée. Reconnecte-toi avant de supprimer ton compte.');
+    }
+
+    const response = await fetch(`${API_URL}/api/delete-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ confirmText: 'SUPPRIMER' })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Suppression impossible pour le moment.');
+    }
+
+    try {
+      localStorage.removeItem(getSavingsMovementsKey());
+    } catch (_) {}
+
+    try {
+      await supabaseClient.auth.signOut();
+    } catch (_) {}
+
+    currentUser = null;
+    currentSubscription = null;
+    state = { revenus: [], envelopes: [], savings: [], adjustments: [] };
+    closeDeleteAccountModal();
+    alert("Ton compte a été supprimé. Merci d'avoir essayé Avant la Paie 🧡 Tu peux toujours revenir si tu changes d'avis!");
+    window.location.href = 'presentation.html';
+  } catch (e) {
+    alert('Impossible de supprimer le compte : ' + e.message);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 // Traduire les erreurs Supabase
 function traduireErreur(msg) {
   const m = msg.toLowerCase();
@@ -2547,6 +2635,16 @@ document.getElementById('enableNotificationsBtn').onclick = async () => {
     alert('Notifications : ' + (result?.message || 'Impossible d’activer les rappels.'));
   }
 };
+
+document.getElementById('deleteAccountBtn')?.addEventListener('click', openDeleteAccountModal);
+document.getElementById('deleteAccountCancelBtn')?.addEventListener('click', closeDeleteAccountModal);
+document.getElementById('deleteAccountContinueBtn')?.addEventListener('click', showDeleteAccountFinalStep);
+document.getElementById('deleteAccountBackBtn')?.addEventListener('click', closeDeleteAccountModal);
+document.getElementById('deleteAccountConfirmInput')?.addEventListener('input', updateDeleteAccountConfirmState);
+document.getElementById('deleteAccountConfirmBtn')?.addEventListener('click', permanentlyDeleteAccount);
+document.getElementById('deleteAccountModal')?.addEventListener('click', e => {
+  if (e.target.id === 'deleteAccountModal') closeDeleteAccountModal();
+});
 
 // Bouton retour sur la page PRO
 document.getElementById('proBackBtn').onclick = () => {

@@ -356,6 +356,11 @@
   .user-dropdown a:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button:hover { background: rgba(255,255,254,0.06); }
   .user-dropdown button.danger { color: var(--warn); }
+  .user-dropdown button.delete-account-menu-btn {
+    color: #ff7a9b;
+    border-top: 1px dashed var(--line);
+    margin-top: 4px;
+  }
 
   .upcoming-card {
     width: 100%;
@@ -1024,6 +1029,45 @@
   .btn-primary.green { background: var(--good); }
   .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
   .btn-danger { background: rgba(229,49,112,0.15); color: var(--warn); }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .delete-account-modal {
+    border: 1px solid rgba(229,49,112,0.25);
+    box-shadow: 0 -20px 50px rgba(0,0,0,0.45), 0 0 34px rgba(229,49,112,0.10);
+  }
+  .delete-account-warning {
+    color: var(--ink);
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .delete-warning-list {
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .delete-warning-list li {
+    background: rgba(229,49,112,0.10);
+    border: 1px solid rgba(229,49,112,0.20);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+  .delete-final-note {
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  #deleteAccountConfirmInput {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace;
+  }
 
   .presets { margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--line); }
   .presets-label {
@@ -2249,6 +2293,7 @@
             <button id="upgradeBtn" style="color:var(--accent); font-weight:600;">✨ Passer à PRO</button>
             <button id="manageBillingBtn">Facturation et abonnement</button>
             <button id="enableNotificationsBtn">Activer les rappels</button>
+            <button class="danger delete-account-menu-btn" id="deleteAccountBtn">⚠ Supprimer mon compte</button>
             <button class="danger" id="logoutBtn">Déconnexion</button>
           </div>
         </div>
@@ -2504,6 +2549,42 @@
       <button class="btn btn-ghost" id="savingAutoDisableBtn">Désactiver</button>
       <button class="btn btn-ghost" id="savingAutoCancelBtn">Annuler</button>
       <button class="btn btn-primary" id="savingAutoSaveBtn">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Suppression définitive du compte -->
+<div class="modal-bg" id="deleteAccountModal">
+  <div class="modal delete-account-modal">
+    <div id="deleteAccountStep1">
+      <h3>Supprimer mon compte</h3>
+      <p class="delete-account-warning">
+        Es-tu sûre de vouloir supprimer ton compte? Cette action est <strong>DÉFINITIVE</strong>.
+      </p>
+      <ul class="delete-warning-list">
+        <li>Suppression de toutes tes données : revenus, enveloppes, fonds bonheur et historique.</li>
+        <li>Annulation immédiate de ton abonnement si un abonnement est actif.</li>
+        <li>Impossible de récupérer ces informations après la suppression.</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="deleteAccountCancelBtn">Annuler</button>
+        <button class="btn btn-danger" id="deleteAccountContinueBtn">Continuer</button>
+      </div>
+    </div>
+
+    <div id="deleteAccountStep2" style="display:none;">
+      <h3>Confirmation finale</h3>
+      <p class="delete-final-note">
+        Pour confirmer, écris <strong>SUPPRIMER</strong> en majuscules.
+      </p>
+      <div class="field">
+        <label>Confirmation</label>
+        <input type="text" id="deleteAccountConfirmInput" placeholder="SUPPRIMER" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="deleteAccountBackBtn">Annuler</button>
+        <button class="btn btn-danger" id="deleteAccountConfirmBtn" disabled>Supprimer définitivement</button>
+      </div>
     </div>
   </div>
 </div>
