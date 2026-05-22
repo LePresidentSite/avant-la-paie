@@ -883,6 +883,29 @@
     background: rgba(255,184,77,0.16);
     outline: none;
   }
+  .remaining-help {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.045);
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+  .remaining-help:hover,
+  .remaining-help:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(255,184,77,0.24);
+    background: rgba(255,184,77,0.08);
+    color: var(--ink);
+    outline: none;
+  }
   .remaining-control {
     display: flex;
     align-items: center;
@@ -910,6 +933,29 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+  .pay-period-hint {
+    margin-top: 9px;
+    color: rgba(245,245,245,0.46);
+    font-family: var(--font-ui, system-ui, sans-serif);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .future-period-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 7px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.04);
+    color: rgba(245,245,245,0.58);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
   }
   .adjustments-history {
     margin-top: 14px;
@@ -2690,12 +2736,14 @@
     <div class="remaining-title-row">
       <div class="label">Reste à allouer</div>
       <button class="remaining-edit" type="button" data-action="open-adjustment" aria-label="Ajuster le reste à allouer">✏️</button>
+      <button class="remaining-help" type="button" data-action="show-pay-period-help" aria-label="Comprendre le calcul du reste à allouer">?</button>
     </div>
     <div class="remaining-control">
       <div class="amount" id="remainingAmount">0 $</div>
     </div>
     <div class="sub" id="remainingSub">Commence par ajouter tes revenus ci-dessus</div>
     <div class="pay-period-meta" id="payPeriodMeta">Période en cours</div>
+    <div class="pay-period-hint" id="payPeriodHint"></div>
     <div class="adjust-meta" id="remainingAdjustMeta" style="display:none;"></div>
     <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
     <div class="adjustments-history" id="adjustmentsHistory" style="display:none;"></div>
@@ -2972,11 +3020,11 @@
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="pensees-avant-la-paie.js?v=1"></script>
-<script src="app.js?v=47"></script>
+<script src="app.js?v=48"></script>
 <script>
-  if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js?v=53').catch(() => {});
-  }
+if ('serviceWorker' in navigator) {
+navigator.serviceWorker.register('sw.js?v=54').catch(() => {});
+}
 </script>
 </body>
 </html>

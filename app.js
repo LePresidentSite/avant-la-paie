@@ -414,7 +414,7 @@ async function ensurePushNotifications(options = {}) {
     }
 
     initFirebaseAppOnce();
-    const registration = await navigator.serviceWorker.register('sw.js?v=52');
+    const registration = await navigator.serviceWorker.register('sw.js?v=54');
     const messaging = firebase.messaging();
     attachPushForegroundListener(messaging);
 
@@ -1566,6 +1566,60 @@ function getPayPeriodDisplayLabel(period) {
   }
 }
 
+function getNextPeriodStart(period) {
+  if (!period?.end) return null;
+  if (period.nextStart) return new Date(period.nextStart);
+
+  const next = new Date(period.end);
+  next.setDate(next.getDate() + 1);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function getPeriodStartForFutureDate(dateStr, period) {
+  const itemDate = parseLocalDate(dateStr);
+  if (!itemDate || !period?.end) return null;
+
+  const currentEnd = new Date(period.end);
+  currentEnd.setHours(0, 0, 0, 0);
+  if (itemDate <= currentEnd) return null;
+
+  let start = getNextPeriodStart(period);
+  if (!start) return null;
+
+  const recurrence = period.recurrence || 'monthly';
+  let guard = 0;
+
+  while (start && guard < 500) {
+    let nextStart = addRecurrenceInterval(start, recurrence, start.getDate());
+    if (!nextStart || nextStart <= start) {
+      nextStart = new Date(start);
+      nextStart.setMonth(nextStart.getMonth() + 1);
+    }
+
+    const end = new Date(nextStart);
+    end.setDate(end.getDate() - 1);
+    end.setHours(23, 59, 59, 999);
+
+    if (itemDate >= start && itemDate <= end) return start;
+    start = nextStart;
+    guard++;
+  }
+
+  return getNextPeriodStart(period);
+}
+
+function getFuturePeriodBadge(dateStr, period) {
+  const futureStart = getPeriodStartForFutureDate(dateStr, period);
+  if (!futureStart) return '';
+
+  return `<div class="future-period-badge">🔮 Sera comptée à partir du ${formatDateShort(isoDate(futureStart))}</div>`;
+}
+
+function showPayPeriodHelp() {
+  alert("Ce montant représente ce qu'il te reste à allouer pour la période en cours.\n\nLes revenus et dépenses prévus pour des périodes futures seront calculés quand on arrivera à leur période.\n\nÇa t'aide à voir clairement ce que tu peux dépenser MAINTENANT, sans te perdre dans les chiffres futurs.");
+}
+
 function getFirstOccurrenceInPeriod(item, period) {
   if (!item.date) return { date: null, noDate: true };
   const recurrence = item.recurrence || 'once';
@@ -2389,6 +2443,7 @@ function render() {
     }
     const recBadge = (r.recurrence && r.recurrence !== 'once')
       ? `<span class="rec-badge green">${getRecurrenceLabel(r.recurrence)}</span>` : '';
+    const futureBadge = getFuturePeriodBadge(r.date, periodBudget.period);
     const div = document.createElement('div');
     div.className = 'item' + (r.received ? ' received' : '');
     div.innerHTML = `
@@ -2396,6 +2451,7 @@ function render() {
       <div class="item-info">
         <div class="item-name">${escapeHtml(r.name)}${recBadge}</div>
         <div class="item-amount"><strong class="green">${fmt(r.amount)}</strong>${when}</div>
+        ${futureBadge}
       </div>
       <div class="item-actions">
         <button class="icon-btn check ${r.received?'on':''}" data-rev-toggle="${r.id}">${r.received?'✓':'○'}</button>
@@ -2417,6 +2473,10 @@ function render() {
   const periodEl = document.getElementById('payPeriodMeta');
   if (periodEl) {
     periodEl.textContent = `${getPayPeriodDisplayLabel(periodBudget.period)} : ${formatDateShort(isoDate(periodBudget.period.start))} → ${formatDateShort(isoDate(periodBudget.period.end))}`;
+  }
+  const periodHintEl = document.getElementById('payPeriodHint');
+  if (periodHintEl) {
+    periodHintEl.textContent = `ⓘ Les paiements prévus après le ${formatDateShort(isoDate(periodBudget.period.end))} seront comptés à leur période`;
   }
   amountEl.textContent = fmt(remain);
   amountEl.classList.remove('good','warn','over');
@@ -2545,6 +2605,7 @@ function render() {
         else if (d > 1) when = `<span class="when">dans ${d}j</span>`;
         else when = `<span class="when">en retard ${Math.abs(d)}j</span>`;
       }
+      const futureBadge = getFuturePeriodBadge(env.date, periodBudget.period);
       const div = document.createElement('div');
       div.className = 'item' + (env.allocated ? ' allocated' : '');
       div.innerHTML = `
@@ -2552,6 +2613,7 @@ function render() {
         <div class="item-info">
           <div class="item-name">${escapeHtml(env.name)}${recBadge}</div>
           <div class="item-amount">${fmt(env.amount)}${when}</div>
+          ${futureBadge}
           ${progress}
         </div>
         <div class="item-actions">
@@ -3315,6 +3377,9 @@ document.body.addEventListener('click', async e => {
   if (!t) return;
   if (t.dataset.action === 'open-adjustment') {
     openAdjustmentModal();
+    return;
+  } else if (t.dataset.action === 'show-pay-period-help') {
+    showPayPeriodHelp();
     return;
   } else if (t.dataset.action === 'open-upcoming' || t.id === 'upcomingBtn') {
     openUpcomingPopup();
