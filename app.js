@@ -79,6 +79,9 @@ let savingMove = { id: null, type: 'deposit' };
 let savingAuto = { id: null };
 let pushRegistrationInProgress = false;
 let pushForegroundListenerAttached = false;
+let cycleUndoSnapshot = null;
+let cycleUndoTimer = null;
+let cycleUndoInProgress = false;
 
 // ============================================================
 // GESTION DES ÉCRANS
@@ -2023,37 +2026,199 @@ function countRecurrent() {
   return recRev + recEnv;
 }
 
+function cloneCycleItems(items) {
+  return (items || []).map(item => ({ ...item }));
+}
+
+function createCycleSnapshot() {
+  return {
+    revenus: cloneCycleItems(state.revenus),
+    envelopes: cloneCycleItems(state.envelopes),
+    adjustmentOffset: getManualAdjustmentOffset(),
+    createdAt: Date.now()
+  };
+}
+
+function showCycleConfirmation() {
+  return new Promise(resolve => {
+    const previous = document.getElementById('cycleConfirmOverlay');
+    if (previous) previous.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'cycleConfirmOverlay';
+    overlay.className = 'cycle-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="cycle-confirm-card" role="dialog" aria-modal="true" aria-labelledby="cycleConfirmTitle">
+        <h3 id="cycleConfirmTitle">Es-tu sûre de vouloir démarrer un nouveau cycle?</h3>
+        <p>Cette action prépare ton prochain cycle sans supprimer tes données.</p>
+        <ul>
+          <li>Tes éléments récurrents seront conservés</li>
+          <li>Leurs dates seront avancées à la prochaine occurrence</li>
+          <li>Les cases cochées seront décochées</li>
+          <li>Ton ajustement manuel sera remis à zéro</li>
+        </ul>
+        <div class="cycle-confirm-actions">
+          <button type="button" class="cycle-confirm-cancel">Annuler</button>
+          <button type="button" class="cycle-confirm-submit">Confirmer</button>
+        </div>
+      </div>
+    `;
+
+    const onKeydown = event => {
+      if (event.key === 'Escape' && document.body.contains(overlay)) {
+        close(false);
+      }
+    };
+
+    const close = result => {
+      document.removeEventListener('keydown', onKeydown);
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 180);
+      resolve(result);
+    };
+
+    overlay.querySelector('.cycle-confirm-cancel').addEventListener('click', () => close(false));
+    overlay.querySelector('.cycle-confirm-submit').addEventListener('click', () => close(true));
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) close(false);
+    });
+    document.addEventListener('keydown', onKeydown);
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    setTimeout(() => overlay.querySelector('.cycle-confirm-submit')?.focus(), 80);
+  });
+}
+
+function clearCycleUndoTimer() {
+  if (cycleUndoTimer) {
+    clearTimeout(cycleUndoTimer);
+    cycleUndoTimer = null;
+  }
+}
+
+function hideCycleToast() {
+  const toast = document.getElementById('cycleUndoToast');
+  if (!toast) return;
+  toast.classList.remove('show');
+  setTimeout(() => toast.remove(), 220);
+}
+
+function showCycleToast(title, body, undoHandler = null) {
+  clearCycleUndoTimer();
+  hideCycleToast();
+
+  const toast = document.createElement('div');
+  toast.id = 'cycleUndoToast';
+  toast.className = 'cycle-toast';
+  toast.innerHTML = `
+    <div class="cycle-toast-copy">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(body)}</span>
+    </div>
+    ${undoHandler ? '<button type="button" class="cycle-toast-undo">Annuler</button>' : ''}
+  `;
+
+  if (undoHandler) {
+    toast.querySelector('.cycle-toast-undo').addEventListener('click', undoHandler);
+    cycleUndoTimer = setTimeout(() => {
+      cycleUndoSnapshot = null;
+      hideCycleToast();
+    }, 60000);
+  } else {
+    cycleUndoTimer = setTimeout(() => {
+      hideCycleToast();
+      clearCycleUndoTimer();
+    }, 4500);
+  }
+
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+}
+
+async function undoRenewCycle(snapshot) {
+  if (!snapshot || cycleUndoInProgress) return;
+  cycleUndoInProgress = true;
+
+  const undoBtn = document.querySelector('#cycleUndoToast .cycle-toast-undo');
+  if (undoBtn) {
+    undoBtn.disabled = true;
+    undoBtn.textContent = 'Restauration...';
+  }
+
+  try {
+    for (const rev of snapshot.revenus) {
+      await saveRevenu({ ...rev }, false);
+    }
+
+    for (const env of snapshot.envelopes) {
+      await saveEnvelope({ ...env }, false);
+    }
+
+    const currentOffset = getManualAdjustmentOffset();
+    const difference = snapshot.adjustmentOffset - currentOffset;
+    if (Math.abs(difference) >= 0.005) {
+      const previousAmount = getAdjustedRemainingAmount();
+      await saveBudgetAdjustment({
+        previous_amount: previousAmount,
+        new_amount: previousAmount + difference,
+        difference,
+        note: 'Annulation du nouveau cycle',
+        cycle_reset: false
+      }, { silent: true });
+    }
+
+    await loadUserData();
+    render();
+    cycleUndoSnapshot = null;
+    showCycleToast('Nouveau cycle annulé', 'État restauré.', null);
+  } catch (err) {
+    alert('Impossible d’annuler le nouveau cycle : ' + err.message);
+  } finally {
+    cycleUndoInProgress = false;
+  }
+}
+
 // Renouveler un cycle: ne jamais supprimer, seulement preparer le prochain cycle
 async function renewCycle() {
   if (!canUseProFeature('Le nouveau cycle automatique')) return;
 
-  if (!confirm('Démarrer un nouveau cycle?\n\n- Tes éléments récurrents seront conservés et leurs dates avancées\n- Les cases cochées seront décochées\n- Ton ajustement manuel sera remis à zéro\n- RIEN ne sera supprimé\n\nTu pourras toujours supprimer manuellement ce que tu veux.')) return;
+  const confirmed = await showCycleConfirmation();
+  if (!confirmed) return;
 
   const btn = document.getElementById('newCycleBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Renouvellement...';
+  const snapshot = createCycleSnapshot();
 
   try {
     // Les revenus restent tous en place. Les recurrents avancent, les autres sont seulement decoches.
     const previousAdjustedAmount = getAdjustedRemainingAmount();
     const activeAdjustmentOffset = getManualAdjustmentOffset();
+    let updated = 0;
     for (const r of state.revenus) {
+      const wasReceived = Boolean(r.received);
+      const isRecurring = r.recurrence && r.recurrence !== 'once';
       r.received = false;
-      if (r.recurrence && r.recurrence !== 'once') {
+      if (isRecurring) {
         if (r.date) {
           r.date = advanceDate(r.date, r.recurrence);
         }
       }
+      if (wasReceived || isRecurring) updated++;
       await saveRevenu(r, false);
     }
     // Les enveloppes restent toutes en place. Les recurrentes avancent, les autres sont seulement decochees.
     for (const e of state.envelopes) {
+      const wasAllocated = Boolean(e.allocated);
+      const isRecurring = e.recurrence && e.recurrence !== 'once';
       e.allocated = false;
-      if (e.recurrence && e.recurrence !== 'once') {
+      if (isRecurring) {
         if (e.date) {
           e.date = advanceDate(e.date, e.recurrence);
         }
       }
+      if (wasAllocated || isRecurring) updated++;
       await saveEnvelope(e, false);
     }
     await saveBudgetAdjustment({
@@ -2064,8 +2229,13 @@ async function renewCycle() {
       cycle_reset: true
     }, { silent: true });
     render();
+    cycleUndoSnapshot = snapshot;
+    showCycleToast('✅ Nouveau cycle démarré!', `${updated} éléments mis à jour. Les dates ont été avancées.`, () => undoRenewCycle(cycleUndoSnapshot));
   } catch (err) {
     alert('Erreur : ' + err.message);
+    cycleUndoSnapshot = null;
+    await loadUserData();
+    render();
   }
   btn.disabled = false;
   btn.textContent = `🔄 Nouveau cycle (${getPayPeriodInfo().label})`;
