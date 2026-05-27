@@ -62,6 +62,7 @@ const FREE_LIMITS = {
   revenus: 1,
   envelopes: 5
 };
+const TRIAL_DAYS = 45;
 let state = {
   revenus: [],
   envelopes: [],
@@ -191,7 +192,7 @@ function checkPaymentReturn() {
       render();
       const message = plan === 'lifetime'
         ? '🎉 Bienvenue dans PRO!\n\nTon accès à vie est activé. Même accès que PRO, sans date d’expiration.'
-        : '🎉 Bienvenue dans PRO!\n\nTon essai de 30 jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.';
+        : `🎉 Bienvenue dans PRO!\n\nTon essai de ${TRIAL_DAYS} jours est activé.\nTu peux gérer ton abonnement depuis Mon compte → Facturation et abonnement.`;
       alert(message);
     }, 2000);
   } else if (paiement === 'annule') {
@@ -2305,12 +2306,12 @@ function advanceDate(dateStr, recurrence) {
 // Calculer les jours restants de l'essai
 function getTrialDaysLeft() {
   if (!currentUser || !currentUser.user_metadata || !currentUser.user_metadata.trial_started_at) {
-    return 30;
+    return TRIAL_DAYS;
   }
   const start = new Date(currentUser.user_metadata.trial_started_at);
   const now = new Date();
   const daysUsed = Math.floor((now - start) / 86400000);
-  return Math.max(0, 30 - daysUsed);
+  return Math.max(0, TRIAL_DAYS - daysUsed);
 }
 
 // ============================================================
