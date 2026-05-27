@@ -159,7 +159,7 @@ module.exports = async (req, res) => {
 
     if (!isLifetime) {
       checkoutParams.subscription_data = {
-        trial_period_days: 30,
+        trial_period_days: 45,
         metadata: {
           user_id: userId,
           plan: plan
