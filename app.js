@@ -462,6 +462,34 @@ async function ensurePushNotifications(options = {}) {
   }
 }
 
+function getSignupSource() {
+  const params = new URLSearchParams(window.location.search);
+  const explicitSource = params.get('source') || params.get('utm_source');
+  if (explicitSource) return explicitSource;
+
+  if (document.referrer) {
+    try {
+      const referrerUrl = new URL(document.referrer);
+      if (referrerUrl.hostname === window.location.hostname && referrerUrl.pathname.includes('presentation')) {
+        return 'page de presentation';
+      }
+      return referrerUrl.hostname || document.referrer;
+    } catch (error) {
+      return document.referrer;
+    }
+  }
+
+  return 'application';
+}
+
+function getSelectedSignupPlan() {
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan') || params.get('forfait');
+  if (plan) return plan;
+
+  return localStorage.getItem('avantLaPaieSelectedPlan') || 'gratuit / non choisi';
+}
+
 // Inscription
 async function signUp(email, password, passwordConfirm) {
   const errorEl = document.getElementById('signupError');
@@ -501,7 +529,12 @@ async function signUp(email, password, passwordConfirm) {
       password: password,
       options: {
         data: {
-          trial_started_at: new Date().toISOString()
+          trial_started_at: new Date().toISOString(),
+          signup_source: getSignupSource(),
+          signup_path: `${window.location.pathname}${window.location.search}`,
+          signup_referrer: document.referrer || '',
+          selected_plan: getSelectedSignupPlan(),
+          app_domain: window.location.hostname
         }
       }
     });
