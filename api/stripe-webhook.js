@@ -14,6 +14,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const {
+  escapeHtml,
+  formatDateFr,
+  sendAdminEmail
+} = require('./_admin-email');
+
 // Vercel doit recevoir le corps brut (pas parsé) pour vérifier la signature Stripe
 module.exports.config = {
   api: {
@@ -138,6 +144,32 @@ async function sendOwnerSms(message) {
   }
 }
 
+async function sendOwnerEmail(subject, details, replyTo) {
+  try {
+    const rows = Object.entries(details || {})
+      .map(([label, value]) => `
+        <tr>
+          <td style="padding: 6px 12px 6px 0; color: #6b7280;">${escapeHtml(label)}</td>
+          <td style="padding: 6px 0; color: #111827; font-weight: 600;">${escapeHtml(value)}</td>
+        </tr>
+      `)
+      .join('');
+
+    await sendAdminEmail({
+      subject,
+      replyTo,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
+          <h2 style="margin: 0 0 16px;">${escapeHtml(subject)}</h2>
+          <table style="border-collapse: collapse;">${rows}</table>
+        </div>
+      `
+    });
+  } catch (error) {
+    console.error('Erreur email admin:', error.message);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -201,6 +233,12 @@ module.exports = async (req, res) => {
           const amount = formatMoneyFromCents(session.amount_total, session.currency);
 
           await sendOwnerSms(`Avant la Paie\nAcces a vie active\nClient: ${email}\nMontant: ${amount}`);
+          await sendOwnerEmail('💳 Acces a vie active - Avant la Paie', {
+            Client: email,
+            Montant: amount,
+            Date: formatDateFr(new Date()),
+            Forfait: 'Acces a vie'
+          }, email);
         } else if (userId && subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           await updateUserSubscription(userId, {
@@ -220,6 +258,12 @@ module.exports = async (req, res) => {
             : 'Nouvel abonnement PRO';
 
           await sendOwnerSms(`Avant la Paie\n${statusLabel}\nClient: ${email}\nPlan: ${plan}`);
+          await sendOwnerEmail('✨ Nouvel abonnement PRO - Avant la Paie', {
+            Client: email,
+            Plan: plan,
+            Statut: subscription.status,
+            Date: formatDateFr(new Date())
+          }, email);
         }
         break;
       }
@@ -237,6 +281,11 @@ module.exports = async (req, res) => {
         const amount = formatMoneyFromCents(invoice.amount_paid, invoice.currency);
 
         await sendOwnerSms(`Avant la Paie\nPaiement recu: ${amount}\nClient: ${email}`);
+        await sendOwnerEmail('💳 Paiement recu - Avant la Paie', {
+          Client: email,
+          Montant: amount,
+          Date: formatDateFr(stripeTimestampToIso(invoice.created) || new Date())
+        }, email);
         break;
       }
 

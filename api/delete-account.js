@@ -12,6 +12,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const {
+  escapeHtml,
+  formatDateFr,
+  sendAdminEmail
+} = require('./_admin-email');
+
 const USER_DATA_TABLES = [
   'notification_logs',
   'push_tokens',
@@ -113,6 +119,7 @@ module.exports = async (req, res) => {
     }
 
     const userId = userData.user.id;
+    const userEmail = userData.user.email || 'courriel inconnu';
 
     const { data: subscription, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
@@ -138,6 +145,22 @@ module.exports = async (req, res) => {
 
     const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (deleteUserError) throw deleteUserError;
+
+    try {
+      await sendAdminEmail({
+        subject: '🗑️ Compte supprime - Avant la Paie',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
+            <h2 style="margin: 0 0 16px;">Compte supprime</h2>
+            <p><strong>Courriel :</strong> ${escapeHtml(userEmail)}</p>
+            <p><strong>Date :</strong> ${escapeHtml(formatDateFr(new Date()))}</p>
+            <p><strong>Statut abonnement avant suppression :</strong> ${escapeHtml(subscription?.status || 'aucun')}</p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Erreur email suppression compte:', emailError.message);
+    }
 
     return res.status(200).json({
       ok: true,
