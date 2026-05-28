@@ -2966,11 +2966,11 @@
     <div id="deleteAccountStep2" style="display:none;">
       <h3>Confirmation finale</h3>
       <p class="delete-final-note">
-        Pour confirmer, écris <strong>SUPPRIMER</strong> en majuscules.
+        Pour confirmer, écris <strong>SUPPRIMER</strong>. Les majuscules ou minuscules sont acceptées.
       </p>
       <div class="field">
         <label>Confirmation</label>
-        <input type="text" id="deleteAccountConfirmInput" placeholder="SUPPRIMER" autocomplete="off" spellcheck="false">
+        <input type="text" id="deleteAccountConfirmInput" placeholder="SUPPRIMER" autocomplete="off" spellcheck="false" autocapitalize="characters" oninput="updateDeleteAccountConfirmState();">
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="deleteAccountBackBtn" onclick="closeDeleteAccountModal();">Annuler</button>
@@ -3020,7 +3020,7 @@
 <script src="config.js?v=30"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="pensees-avant-la-paie.js?v=1"></script>
-<script src="app.js?v=49"></script>
+<script src="app.js?v=50"></script>
 <script>
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js?v=54').catch(() => {});

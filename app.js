@@ -672,15 +672,15 @@ function updateDeleteAccountConfirmState() {
   const input = document.getElementById('deleteAccountConfirmInput');
   const btn = document.getElementById('deleteAccountConfirmBtn');
   if (!input || !btn) return;
-  btn.disabled = input.value.trim() !== 'SUPPRIMER';
+  btn.disabled = input.value.trim().toUpperCase() !== 'SUPPRIMER';
 }
 
 async function permanentlyDeleteAccount() {
   const input = document.getElementById('deleteAccountConfirmInput');
   const btn = document.getElementById('deleteAccountConfirmBtn');
   if (btn?.dataset.busy === '1') return;
-  if (!input || !btn || input.value.trim() !== 'SUPPRIMER') {
-    alert('Pour confirmer, tu dois écrire SUPPRIMER en majuscules.');
+  if (!input || !btn || input.value.trim().toUpperCase() !== 'SUPPRIMER') {
+    alert('Pour confirmer, tu dois écrire SUPPRIMER.');
     return;
   }
 
@@ -2989,6 +2989,7 @@ Object.assign(window, {
   openDeleteAccountModal,
   closeDeleteAccountModal,
   showDeleteAccountFinalStep,
+  updateDeleteAccountConfirmState,
   permanentlyDeleteAccount
 });
 
