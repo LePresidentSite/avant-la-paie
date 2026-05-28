@@ -3,7 +3,7 @@
 // ============================================================
 
 const DEFAULT_TO = 'contact@avantlapaie.com';
-const DEFAULT_FROM = 'Avant la Paie <onboarding@resend.dev>';
+const DEFAULT_FROM = 'Avant la Paie <contact@avantlapaie.com>';
 
 function escapeHtml(value) {
   return String(value ?? '')

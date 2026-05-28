@@ -95,13 +95,22 @@ module.exports = async (req, res) => {
       </div>
     `;
 
-    await sendAdminEmail({
-      subject: '🎉 Nouvelle inscription sur Avant la Paie',
-      html,
-      replyTo: email && email !== 'courriel inconnu' ? email : undefined
-    });
+    try {
+      await sendAdminEmail({
+        subject: '🎉 Nouvelle inscription sur Avant la Paie',
+        html,
+        replyTo: email && email !== 'courriel inconnu' ? email : undefined
+      });
+    } catch (emailError) {
+      console.error('Erreur email notification inscription:', emailError.message);
+      return res.status(200).json({
+        ok: true,
+        emailSent: false,
+        warning: emailError.message
+      });
+    }
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, emailSent: true });
   } catch (error) {
     console.error('Erreur notification inscription:', error);
     return res.status(500).json({ error: error.message });

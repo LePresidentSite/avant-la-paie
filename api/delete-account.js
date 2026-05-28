@@ -4,7 +4,9 @@
 // ============================================================
 
 const Stripe = require('stripe');
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const { createClient } = require('@supabase/supabase-js');
 const supabaseAdmin = createClient(
@@ -46,6 +48,9 @@ function shouldIgnoreMissingTable(error) {
 
 async function cancelStripeSubscription(subscriptionId) {
   if (!subscriptionId) return;
+  if (!stripe) {
+    throw new Error('STRIPE_SECRET_KEY manquante: impossible d annuler l abonnement avant la suppression.');
+  }
 
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -64,6 +69,9 @@ async function cancelStripeSubscription(subscriptionId) {
 
 async function deleteStripeCustomer(customerId) {
   if (!customerId) return;
+  if (!stripe) {
+    throw new Error('STRIPE_SECRET_KEY manquante: impossible de supprimer le client Stripe avant la suppression.');
+  }
 
   try {
     await stripe.customers.del(customerId);
@@ -121,22 +129,29 @@ module.exports = async (req, res) => {
     const userId = userData.user.id;
     const userEmail = userData.user.email || 'courriel inconnu';
 
-    const { data: subscription, error: subscriptionError } = await supabaseAdmin
+    const { data: subscriptionRows, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
       .select('stripe_customer_id, stripe_subscription_id, status')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
 
     if (subscriptionError && !shouldIgnoreMissingTable(subscriptionError)) {
       throw subscriptionError;
     }
 
-    if (subscription?.stripe_subscription_id && subscription.status !== 'lifetime') {
-      await cancelStripeSubscription(subscription.stripe_subscription_id);
+    const subscriptions = Array.isArray(subscriptionRows) ? subscriptionRows : [];
+    const stripeSubscriptionIds = [
+      ...new Set(subscriptions.map(row => row.stripe_subscription_id).filter(Boolean))
+    ];
+    const stripeCustomerIds = [
+      ...new Set(subscriptions.map(row => row.stripe_customer_id).filter(Boolean))
+    ];
+
+    for (const subscriptionId of stripeSubscriptionIds) {
+      await cancelStripeSubscription(subscriptionId);
     }
 
-    if (subscription?.stripe_customer_id) {
-      await deleteStripeCustomer(subscription.stripe_customer_id);
+    for (const customerId of stripeCustomerIds) {
+      await deleteStripeCustomer(customerId);
     }
 
     for (const table of USER_DATA_TABLES) {
@@ -154,7 +169,7 @@ module.exports = async (req, res) => {
             <h2 style="margin: 0 0 16px;">Compte supprime</h2>
             <p><strong>Courriel :</strong> ${escapeHtml(userEmail)}</p>
             <p><strong>Date :</strong> ${escapeHtml(formatDateFr(new Date()))}</p>
-            <p><strong>Statut abonnement avant suppression :</strong> ${escapeHtml(subscription?.status || 'aucun')}</p>
+            <p><strong>Statut abonnement avant suppression :</strong> ${escapeHtml(subscriptions.map(row => row.status).filter(Boolean).join(', ') || 'aucun')}</p>
           </div>
         `
       });
