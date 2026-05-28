@@ -724,6 +724,7 @@ async function permanentlyDeleteAccount() {
     alert("Ton compte a été supprimé. Merci d'avoir essayé Avant la Paie 🧡 Tu peux toujours revenir si tu changes d'avis!");
     window.location.href = 'presentation.html';
   } catch (e) {
+    console.error('Suppression compte echouee:', e);
     alert('Impossible de supprimer le compte : ' + e.message);
     btn.dataset.busy = '0';
     btn.disabled = false;
@@ -2983,6 +2984,13 @@ document.getElementById('helpFaqBtn').onclick = () => {
   document.getElementById('userDropdown').classList.remove('show');
   showScreen('faqScreen');
 };
+
+Object.assign(window, {
+  openDeleteAccountModal,
+  closeDeleteAccountModal,
+  showDeleteAccountFinalStep,
+  permanentlyDeleteAccount
+});
 
 document.getElementById('deleteAccountBtn')?.addEventListener('click', e => openDeleteAccountModal(e));
 document.getElementById('deleteAccountCancelBtn')?.addEventListener('click', closeDeleteAccountModal);
