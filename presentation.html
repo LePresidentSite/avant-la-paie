@@ -8,29 +8,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0F172A; color: #F8FAFC; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-  .nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); }
-  .brand { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 800; font-style: italic; }
-  .story-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; text-align: center; max-width: 700px; margin: 60px auto; }
-  .story-text { text-align: left; line-height: 1.8; color: #E2E8F0; margin-top: 20px; }
-  .footer { text-align: center; padding: 40px; color: #94A3B8; }
+  :root { --bg: #0F172A; --ink: #F8FAFC; --muted: #CBD5E1; --accent: #2563EB; --accent-2: #60A5FA; --radius: 28px; }
+  body { background: #0F172A; color: var(--ink); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+  .nav { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .brand { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 800; font-style: italic; color: var(--ink); }
+  .nav-cta { background: linear-gradient(135deg, #60A5FA, #2563EB); color: #fff; padding: 12px 24px; border-radius: 999px; font-weight: 800; }
+  .hero { max-width: 1200px; margin: 60px auto; text-align: center; padding: 0 20px; }
+  h1 { font-family: 'Fraunces', serif; font-size: clamp(40px, 6vw, 70px); margin-bottom: 20px; }
+  .story-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; text-align: center; max-width: 800px; margin: 60px auto; }
+  .story-text { text-align: left; line-height: 1.8; color: #E2E8F0; margin-top: 20px; font-size: 17px; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 40px; max-width: 1000px; margin: 0 auto; }
+  .price-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; text-align: left; }
+  .footer { text-align: center; padding: 40px; color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.1); }
 </style>
 </head>
 <body>
 
   <nav class="nav">
     <a class="brand" href="presentation.html">avant.la paie</a>
+    <a class="nav-cta" href="index.html">Essayer</a>
   </nav>
+
+  <header class="hero">
+    <h1>L'application de budget pensée pour les cerveaux TDAH</h1>
+    <p style="font-size: 20px; color: var(--muted);">La gestion d'argent qui ne fatigue pas ton cerveau.</p>
+  </header>
 
   <section id="histoire">
     <div class="story-card">
-        <!-- Ta photo -->
         <div style="display: flex; justify-content: center; margin-bottom: 20px;">
           <img src="image_0320fb.jpg" alt="" style="width: 150px; height: 150px; object-fit: cover; border-radius: 50%; border: 3px solid #60A5FA;">
         </div>
-
         <h2 style="font-family: 'Fraunces', serif; font-size: 32px;">Bonjour, moi c'est Caroline.</h2>
-        
         <div class="story-text">
           <p style="margin-bottom: 15px;">J'ai 54 ans et j'ai découvert que j'avais un TDAH vers l'âge de 40 ans.</p>
           <p style="margin-bottom: 15px;">Avant de comprendre ce qui se passait réellement, j'ai passé une grande partie de ma vie à me demander pourquoi certaines choses semblaient si simples pour les autres, mais demandaient chez moi beaucoup plus d'efforts. L'organisation, la gestion du temps, les finances, les oublis, les imprévus et la surcharge mentale faisaient partie de mon quotidien.</p>
@@ -42,12 +51,29 @@
           <p style="margin-bottom: 15px;">Avant la Paie n'a pas été créée par une grande institution financière. Elle a été créée par une personne qui connaît les défis du TDAH, qui a vécu les oublis, les achats impulsifs, les fins de mois stressantes et la recherche constante de solutions pour mieux s'organiser.</p>
           <p>Si cette application peut vous aider à voir plus clair, à réduire votre charge mentale et à retrouver un peu plus de confiance dans votre relation avec l'argent, alors elle aura accompli exactement ce pour quoi elle a été créée.</p>
         </div>
-
         <div style="margin-top: 30px;">
           <div style="font-size: 24px;">💙</div>
           <div style="font-family: 'Fraunces', serif; font-size: 20px; font-weight: 800; margin-top: 5px;">Caroline</div>
           <div style="color: #93C5FD; font-size: 14px;">Créatrice d'Avant la Paie</div>
         </div>
+    </div>
+  </section>
+
+  <section id="prix">
+    <div style="text-align: center;">
+      <h2 style="font-family: 'Fraunces', serif; font-size: 40px; margin-bottom: 20px;">Commence gratuitement</h2>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3 style="color: var(--accent-2);">Accès à vie ✨</h3>
+        <div style="font-size: 40px; margin: 15px 0;">39,99 $</div>
+        <p style="color: var(--muted);">Paiement unique, accès illimité.</p>
+      </div>
+      <div class="price-card">
+        <h3 style="color: var(--accent-2);">Annuel</h3>
+        <div style="font-size: 40px; margin: 15px 0;">29,99 $</div>
+        <p style="color: var(--muted);">Environ 2,50 $ par mois.</p>
+      </div>
     </div>
   </section>
 
