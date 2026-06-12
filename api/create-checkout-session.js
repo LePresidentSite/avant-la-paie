@@ -41,17 +41,54 @@ async function getLifetimeOfferStatus() {
   };
 }
 
-async function findExistingBillingProfile(userId, userEmail) {
+async function validateStripeCustomer(customerId) {
+  if (!customerId) return null;
+
   try {
-    const { data } = await supabaseAdmin
+    const customer = await stripe.customers.retrieve(customerId);
+    return customer && !customer.deleted ? customer : null;
+  } catch (error) {
+    if (error.code === 'resource_missing' || error.param === 'customer') {
+      console.warn('Client Stripe perime ignore:', customerId);
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function updateStoredCustomer(userId, customerId) {
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .update({
+      stripe_customer_id: customerId,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.warn('Mise a jour du client Stripe impossible:', error.message);
+  }
+}
+
+async function findExistingBillingProfile(userId, userEmail) {
+  let profile = {
+    customerId: null,
+    subscriptionId: null,
+    status: null
+  };
+
+  try {
+    const { data, error } = await supabaseAdmin
       .from('subscriptions')
       .select('status, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (data?.stripe_customer_id) {
-      return {
-        customerId: data.stripe_customer_id,
+    if (error) throw error;
+
+    if (data) {
+      profile = {
+        customerId: data.stripe_customer_id || null,
         subscriptionId: data.stripe_subscription_id || null,
         status: data.status || null
       };
@@ -60,15 +97,30 @@ async function findExistingBillingProfile(userId, userEmail) {
     console.warn('Recherche client Supabase impossible:', error.message);
   }
 
+  const storedCustomer = await validateStripeCustomer(profile.customerId);
+  if (storedCustomer) return profile;
+
   const customers = await stripe.customers.list({
     email: userEmail,
-    limit: 1
+    limit: 10
   });
+  const matchingCustomer = customers.data.find((customer) => !customer.deleted) || null;
+
+  if (matchingCustomer) {
+    await updateStoredCustomer(userId, matchingCustomer.id);
+    return {
+      ...profile,
+      customerId: matchingCustomer.id
+    };
+  }
+
+  if (profile.customerId) {
+    await updateStoredCustomer(userId, null);
+  }
 
   return {
-    customerId: customers.data[0]?.id || null,
-    subscriptionId: null,
-    status: null
+    ...profile,
+    customerId: null
   };
 }
 
