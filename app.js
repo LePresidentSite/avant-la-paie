@@ -1657,9 +1657,10 @@ function getRemainingCalculationMessage() {
   const remain = budget.baseRemain + adjustments;
   const adjustmentSign = adjustments < 0 ? '-' : '+';
   const periodLabel = `${getPayPeriodDisplayLabel(budget.period)} : ${formatDateShort(isoDate(budget.period.start))} → ${formatDateShort(isoDate(budget.period.end))}`;
-  const envelopeLines = budget.envelopes.length
-    ? budget.envelopes.map(env => `  • ${env.emoji || '•'} ${env.name || 'Enveloppe'} : ${fmt(parseFloat(env.amount) || 0)}`)
-    : ['  • Aucune enveloppe dans cette période'];
+  const countedEnvelopes = budget.allocatedEnvelopes || [];
+  const envelopeLines = countedEnvelopes.length
+    ? countedEnvelopes.map(env => `  • ${env.emoji || '•'} ${env.name || 'Enveloppe'} : ${fmt(parseFloat(env.amount) || 0)}`)
+    : ['  • Aucune enveloppe cochée comme faite dans cette période'];
 
   return [
     'Calcul réel du reste à allouer',
@@ -1667,14 +1668,14 @@ function getRemainingCalculationMessage() {
     periodLabel,
     '',
     `+ Revenus de la période : ${fmt(budget.totalRevenus)}`,
-    `- Enveloppes de la période : ${fmt(budget.totalAlloc)}`,
+    `- Enveloppes faites de la période : ${fmt(budget.totalAlloc)}`,
     ...envelopeLines,
     `- Fonds bonheur de la période : ${fmt(budget.totalSavings)}`,
     `${adjustmentSign} Ajustements manuels : ${fmt(Math.abs(adjustments))}`,
     '--------------------------------',
     `= Reste à allouer : ${fmt(remain)}`,
     '',
-    'Formule : revenus - enveloppes - fonds bonheur + ajustements manuels.',
+    'Formule : revenus - enveloppes faites - fonds bonheur + ajustements manuels.',
     `Les éléments prévus après le ${formatDateShort(isoDate(budget.period.end))} seront comptés dans leur période.`
   ].join('\n');
 }
@@ -1723,9 +1724,10 @@ function getCurrentPeriodBudget() {
   const period = getCurrentPayPeriod();
   const revenus = state.revenus.filter(item => itemOccursInPeriod(item, period));
   const envelopes = state.envelopes.filter(item => itemOccursInPeriod(item, period));
+  const allocatedEnvelopes = envelopes.filter(env => env.allocated);
   const savings = state.savings.filter(item => itemOccursInPeriod(item, period));
   const totalRevenus = revenus.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-  const totalAlloc = envelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalAlloc = allocatedEnvelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
   const totalSavings = savings.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
   const totalReserved = totalAlloc + totalSavings;
 
@@ -1733,6 +1735,7 @@ function getCurrentPeriodBudget() {
     period,
     revenus,
     envelopes,
+    allocatedEnvelopes,
     savings,
     totalRevenus,
     totalAlloc,
