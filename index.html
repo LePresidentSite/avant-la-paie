@@ -911,6 +911,44 @@
     align-items: center;
     justify-content: center;
   }
+  .payment-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+    text-align: left;
+  }
+  .payment-stat {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.04);
+    padding: 12px 13px;
+    min-width: 0;
+  }
+  .payment-label {
+    display: block;
+    color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .payment-stat strong {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-display, system-ui, sans-serif);
+    font-size: clamp(18px, 5vw, 24px);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  .payment-count {
+    display: block;
+    margin-top: 5px;
+    color: rgba(245,245,245,0.58);
+    font-size: 12px;
+  }
+  .payment-stat.paid strong { color: var(--good); }
+  .payment-stat.due strong { color: var(--accent-2); }
   .adjust-meta {
     margin-top: 10px;
     color: var(--accent);
@@ -2384,6 +2422,10 @@
       padding: 28px 18px;
     }
 
+    .payment-summary {
+      grid-template-columns: 1fr;
+    }
+
     #cycleBar {
       flex-direction: row;
       flex-wrap: wrap;
@@ -2742,6 +2784,18 @@
       <div class="amount" id="remainingAmount">0 $</div>
     </div>
     <div class="sub" id="remainingSub">Commence par ajouter tes revenus ci-dessus</div>
+    <div class="payment-summary" aria-label="Suivi des enveloppes de la période">
+      <div class="payment-stat paid">
+        <span class="payment-label">Déjà payé</span>
+        <strong id="paidAmount">0 $</strong>
+        <span class="payment-count" id="paidCount">0 enveloppe payée</span>
+      </div>
+      <div class="payment-stat due">
+        <span class="payment-label">Reste à payer</span>
+        <strong id="toPayAmount">0 $</strong>
+        <span class="payment-count" id="toPayCount">0 enveloppe à payer</span>
+      </div>
+    </div>
     <div class="pay-period-meta" id="payPeriodMeta">Période en cours</div>
     <div class="pay-period-hint" id="payPeriodHint"></div>
     <div class="adjust-meta" id="remainingAdjustMeta" style="display:none;"></div>

@@ -1074,6 +1074,12 @@ function fmtSigned(n) {
   return `${value > 0 ? '+' : ''}${fmt(value)}`;
 }
 
+function formatEnvelopeCount(count, singularLabel, pluralLabel = `${singularLabel}s`) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  if (safeCount === 1) return `1 enveloppe ${singularLabel}`;
+  return `${safeCount} enveloppes ${pluralLabel}`;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -1670,6 +1676,7 @@ function getRemainingCalculationMessage() {
     `+ Revenus de la période : ${fmt(budget.totalRevenus)}`,
     `- Enveloppes faites de la période : ${fmt(budget.totalAlloc)}`,
     ...envelopeLines,
+    `  Reste à payer : ${fmt(budget.totalToPay || 0)}`,
     `- Fonds bonheur de la période : ${fmt(budget.totalSavings)}`,
     `${adjustmentSign} Ajustements manuels : ${fmt(Math.abs(adjustments))}`,
     '--------------------------------',
@@ -1725,9 +1732,11 @@ function getCurrentPeriodBudget() {
   const revenus = state.revenus.filter(item => itemOccursInPeriod(item, period));
   const envelopes = state.envelopes.filter(item => itemOccursInPeriod(item, period));
   const allocatedEnvelopes = envelopes.filter(env => env.allocated);
+  const unpaidEnvelopes = envelopes.filter(env => !env.allocated);
   const savings = state.savings.filter(item => itemOccursInPeriod(item, period));
   const totalRevenus = revenus.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const totalAlloc = allocatedEnvelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalToPay = unpaidEnvelopes.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
   const totalSavings = savings.reduce((s, item) => s + (parseFloat(item.amount) || 0), 0);
   const totalReserved = totalAlloc + totalSavings;
 
@@ -1736,9 +1745,11 @@ function getCurrentPeriodBudget() {
     revenus,
     envelopes,
     allocatedEnvelopes,
+    unpaidEnvelopes,
     savings,
     totalRevenus,
     totalAlloc,
+    totalToPay,
     totalSavings,
     totalReserved,
     baseRemain: totalRevenus - totalReserved
@@ -2529,6 +2540,7 @@ function render() {
 
   // Reste à allouer
   const totalAlloc = periodBudget.totalAlloc;
+  const totalToPay = periodBudget.totalToPay;
   const totalSavings = periodBudget.totalSavings;
   const totalReserved = periodBudget.totalReserved;
   const baseRemain = periodBudget.baseRemain;
@@ -2536,6 +2548,10 @@ function render() {
 
   const amountEl = document.getElementById('remainingAmount');
   const subEl = document.getElementById('remainingSub');
+  const paidEl = document.getElementById('paidAmount');
+  const paidCountEl = document.getElementById('paidCount');
+  const toPayEl = document.getElementById('toPayAmount');
+  const toPayCountEl = document.getElementById('toPayCount');
   const periodEl = document.getElementById('payPeriodMeta');
   if (periodEl) {
     periodEl.textContent = `${getPayPeriodDisplayLabel(periodBudget.period)} : ${formatDateShort(isoDate(periodBudget.period.start))} → ${formatDateShort(isoDate(periodBudget.period.end))}`;
@@ -2545,6 +2561,10 @@ function render() {
     periodHintEl.textContent = `ⓘ Les paiements prévus après le ${formatDateShort(isoDate(periodBudget.period.end))} seront comptés à leur période`;
   }
   amountEl.textContent = fmt(remain);
+  if (paidEl) paidEl.textContent = fmt(totalAlloc);
+  if (paidCountEl) paidCountEl.textContent = formatEnvelopeCount(periodBudget.allocatedEnvelopes.length, 'payée');
+  if (toPayEl) toPayEl.textContent = fmt(totalToPay);
+  if (toPayCountEl) toPayCountEl.textContent = formatEnvelopeCount(periodBudget.unpaidEnvelopes.length, 'à payer', 'à payer');
   amountEl.classList.remove('good','warn','over');
 
   if (state.revenus.length === 0) {
