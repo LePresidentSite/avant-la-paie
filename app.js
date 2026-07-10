@@ -1657,6 +1657,9 @@ function getRemainingCalculationMessage() {
   const remain = budget.baseRemain + adjustments;
   const adjustmentSign = adjustments < 0 ? '-' : '+';
   const periodLabel = `${getPayPeriodDisplayLabel(budget.period)} : ${formatDateShort(isoDate(budget.period.start))} → ${formatDateShort(isoDate(budget.period.end))}`;
+  const envelopeLines = budget.envelopes.length
+    ? budget.envelopes.map(env => `  • ${env.emoji || '•'} ${env.name || 'Enveloppe'} : ${fmt(parseFloat(env.amount) || 0)}`)
+    : ['  • Aucune enveloppe dans cette période'];
 
   return [
     'Calcul réel du reste à allouer',
@@ -1665,6 +1668,7 @@ function getRemainingCalculationMessage() {
     '',
     `+ Revenus de la période : ${fmt(budget.totalRevenus)}`,
     `- Enveloppes de la période : ${fmt(budget.totalAlloc)}`,
+    ...envelopeLines,
     `- Fonds bonheur de la période : ${fmt(budget.totalSavings)}`,
     `${adjustmentSign} Ajustements manuels : ${fmt(Math.abs(adjustments))}`,
     '--------------------------------',
