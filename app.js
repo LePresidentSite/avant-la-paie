@@ -1651,8 +1651,32 @@ function getFuturePeriodBadge(dateStr, period) {
   return `<div class="future-period-badge">🔮 Sera comptée à partir du ${formatDateShort(isoDate(futureStart))}</div>`;
 }
 
+function getRemainingCalculationMessage() {
+  const budget = getCurrentPeriodBudget();
+  const adjustments = getManualAdjustmentOffset();
+  const remain = budget.baseRemain + adjustments;
+  const adjustmentSign = adjustments < 0 ? '-' : '+';
+  const periodLabel = `${getPayPeriodDisplayLabel(budget.period)} : ${formatDateShort(isoDate(budget.period.start))} → ${formatDateShort(isoDate(budget.period.end))}`;
+
+  return [
+    'Calcul réel du reste à allouer',
+    '',
+    periodLabel,
+    '',
+    `+ Revenus de la période : ${fmt(budget.totalRevenus)}`,
+    `- Enveloppes de la période : ${fmt(budget.totalAlloc)}`,
+    `- Fonds bonheur de la période : ${fmt(budget.totalSavings)}`,
+    `${adjustmentSign} Ajustements manuels : ${fmt(Math.abs(adjustments))}`,
+    '--------------------------------',
+    `= Reste à allouer : ${fmt(remain)}`,
+    '',
+    'Formule : revenus - enveloppes - fonds bonheur + ajustements manuels.',
+    `Les éléments prévus après le ${formatDateShort(isoDate(budget.period.end))} seront comptés dans leur période.`
+  ].join('\n');
+}
+
 function showPayPeriodHelp() {
-  alert("Ce montant représente ce qu'il te reste à allouer pour la période en cours.\n\nLes revenus et dépenses prévus pour des périodes futures seront calculés quand on arrivera à leur période.\n\nÇa t'aide à voir clairement ce que tu peux dépenser MAINTENANT, sans te perdre dans les chiffres futurs.");
+  alert(getRemainingCalculationMessage());
 }
 
 function getFirstOccurrenceInPeriod(item, period) {
